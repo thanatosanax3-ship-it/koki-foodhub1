@@ -1,0 +1,86 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login – Koki's Foodhub</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/static/styles.css">
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+    }
+    
+    .login-container {
+      width: 100%;
+      max-width: 420px;
+      padding: 20px;
+    }
+    
+    .login-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 40px;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
+    }
+    
+    .login-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    
+    .login-header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0;
+      color: var(--fg);
+    }
+    
+    .login-header p {
+      color: var(--text-secondary);
+      margin: 8px 0 0 0;
+      font-size: 14px;
+    }
+    
+    .login-card .form {
+      max-width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-card">
+      <div class="login-header">
+        <h1>🍲 Koki's Foodhub</h1>
+        <p>Sign in to your account</p>
+      </div>
+      
+      <form method="post" class="form">
+        <input type="hidden" name="csrfmiddlewaretoken" value="5kUi177qcQMI3lR9Yo9HkDQEZRKkugzriQDk1EgZtOQO7ClZ7MpJAS9Cu3mdy4mu">
+        
+        
+        
+        
+          <div class="field">
+            <label for="id_username">Username</label>
+            <input type="text" name="username" autofocus autocapitalize="none" autocomplete="username" maxlength="150" required id="id_username">
+            
+          </div>
+        
+          <div class="field">
+            <label for="id_password">Password</label>
+            <input type="password" name="password" autocomplete="current-password" required id="id_password">
+            
+          </div>
+        
+        
+        <button class="btn primary block" type="submit" style="margin-top: 8px;">Sign In</button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>
+

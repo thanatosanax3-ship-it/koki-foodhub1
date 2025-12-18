@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cart Debug Test</title>
+</head>
+<body>
+    <h1>Cart Debug Test</h1>
+    <div id="results"></div>
+
+    <script>
+        // Simulate the products object and cart logic
+        const products = {
+            1: {
+                id: 1,
+                name: 'Fries',
+                category: 'snacks',
+                price: 20.0,
+                quantity: 0,
+                size: 'M',
+                size_prices: {
+                    'S': 15,
+                    'M': 25,
+                    'L': 30,
+                    'XL': 35,
+                    'XXL': 40,
+                    'Regular': 20
+                }
+            }
+        };
+
+        let cart = [];
+
+        function addToCart(product, size = null) {
+            console.log('Adding to cart:', product, 'Size:', size);
+            
+            const cartKey = size ? `${product.id}_${size}` : product.id;
+            const existing = cart.find(item => {
+                if (size) {
+                    return item.id === product.id && item.size === size;
+                }
+                return item.id === product.id && !item.size;
+            });
+
+            // Check inventory
+            const currentQuantityInCart = existing ? existing.quantity : 0;
+            const totalQuantityNeeded = currentQuantityInCart + 1;
+            
+            if (product.quantity !== undefined && product.quantity !== null && totalQuantityNeeded > product.quantity) {
+                alert(`Not enough inventory! Available: ${product.quantity}, Requested: ${totalQuantityNeeded}`);
+                return;
+            }
+
+            // Determine the price based on size
+            let itemPrice = product.price;
+            if (size && product.size_prices && product.size_prices[size]) {
+                itemPrice = product.size_prices[size];
+            }
+
+            if (existing) {
+                existing.quantity += 1;
+            } else {
+                cart.push({ 
+                    id: product.id,
+                    name: product.name, 
+                    price: itemPrice, 
+                    quantity: 1, 
+                    size: size || null,
+                    category: product.category 
+                });
+            }
+            console.log('Cart updated:', cart);
+        }
+
+        // Test the logic
+        const product = products[1];
+        console.log('Product:', product);
+        console.log('Product quantity:', product.quantity);
+        
+        // Try adding with size Regular
+        addToCart(product, 'Regular');
+        
+        document.getElementById('results').innerHTML = `
+            <p>Cart length: ${cart.length}</p>
+            <p>Cart contents: ${JSON.stringify(cart, null, 2)}</p>
+        `;
+    </script>
+</body>
+</html>

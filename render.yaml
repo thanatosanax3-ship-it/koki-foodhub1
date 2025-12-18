@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: koki-foodhub-app
+    env: python
+    branch: main
+    plan: free
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
+    startCommand: gunicorn koki_foodhub.wsgi
+    envVars:
+      - key: DEBUG
+        value: "False"
+      - key: SECRET_KEY
+        value: "@secret_key"
+      - key: ALLOWED_HOSTS
+        value: "*.onrender.com,localhost,127.0.0.1"
+databases:
+  - name: koki-foodhub-db
+    plan: starter
+    region: oregon

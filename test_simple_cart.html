@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Cart Test</title>
+</head>
+<body>
+    <h1>Testing Cart Logic</h1>
+    <button onclick="testAddToCart()">Test Add Product</button>
+    <div id="output"></div>
+
+    <script>
+        let cart = [];
+        
+        const products = {
+            1: {
+                id: 1,
+                name: 'Fries',
+                category: 'snacks',
+                price: 20.0,
+                quantity: 0,
+                size: 'M',
+                size_prices: {
+                    'S': 15,
+                    'M': 25,
+                    'L': 30,
+                    'Regular': 20
+                }
+            }
+        };
+
+        function addToCart(product, size = null) {
+            console.log('addToCart called with:', product.name, size);
+            
+            const existing = cart.find(item => {
+                if (size) {
+                    return item.id === product.id && item.size === size;
+                }
+                return item.id === product.id && !item.size;
+            });
+
+            let itemPrice = product.price;
+            if (size && product.size_prices && product.size_prices[size]) {
+                itemPrice = product.size_prices[size];
+            }
+
+            if (existing) {
+                existing.quantity += 1;
+            } else {
+                cart.push({ 
+                    id: product.id,
+                    name: product.name, 
+                    price: itemPrice, 
+                    quantity: 1, 
+                    size: size || null,
+                    category: product.category 
+                });
+            }
+            
+            updateCart();
+        }
+
+        function updateCart() {
+            console.log('updateCart called, cart length:', cart.length);
+            let html = `<h3>Cart (${cart.length} items)</h3>`;
+            
+            if (cart.length === 0) {
+                html += '<p>Cart is empty</p>';
+            } else {
+                html += '<ul>';
+                cart.forEach(item => {
+                    html += `<li>${item.name} (${item.size}) - ₱${item.price} x ${item.quantity}</li>`;
+                });
+                html += '</ul>';
+            }
+            
+            document.getElementById('output').innerHTML = html;
+        }
+
+        function testAddToCart() {
+            console.log('Test button clicked');
+            const product = products[1];
+            console.log('Product:', product);
+            addToCart(product, 'Regular');
+        }
+
+        // Initialize cart display
+        updateCart();
+    </script>
+</body>
+</html>

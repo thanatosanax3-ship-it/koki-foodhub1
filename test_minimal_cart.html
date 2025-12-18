@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Cart</title>
+    <style>
+        .product-card { 
+            padding: 20px; 
+            border: 1px solid #ccc; 
+            cursor: pointer; 
+            margin: 10px; 
+            width: 200px;
+            background: #f9f9f9;
+        }
+        .product-card:hover {
+            background: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Cart System</h1>
+    
+    <h2>Products</h2>
+    <div id="productGrid">
+        <div class="product-card" onclick="handleProductClick(event, 1)">
+            <h3>Product 1</h3>
+            <p>Price: ₱100</p>
+        </div>
+        <div class="product-card" onclick="handleProductClick(event, 2)">
+            <h3>Product 2</h3>
+            <p>Price: ₱150</p>
+        </div>
+    </div>
+
+    <h2>Cart</h2>
+    <div id="orderItems" style="border: 1px solid #ccc; padding: 20px; min-height: 100px;">
+        Cart is empty
+    </div>
+
+    <script>
+        let cart = [];
+        
+        const products = {
+            1: {
+                id: 1,
+                name: 'Product 1',
+                price: 100,
+                quantity: 0,
+                size: 'M',
+                size_prices: { M: 100, L: 120, Regular: 100 }
+            },
+            2: {
+                id: 2,
+                name: 'Product 2',
+                price: 150,
+                quantity: 0,
+                size: '',
+                size_prices: {}
+            }
+        };
+
+        function handleProductClick(event, productId) {
+            console.log('handleProductClick called with:', productId);
+            event.stopPropagation();
+            const product = products[productId];
+            
+            if (!product) {
+                alert('Product not found');
+                return;
+            }
+            
+            if (product.size) {
+                alert('This product has size: ' + product.size);
+                addToCart(product, 'M');
+            } else {
+                addToCart(product, null);
+            }
+        }
+
+        function addToCart(product, size = null) {
+            console.log('addToCart called:', product.name, size);
+            
+            const existing = cart.find(item => 
+                item.id === product.id && (size ? item.size === size : !item.size)
+            );
+
+            let itemPrice = product.price;
+            if (size && product.size_prices && product.size_prices[size]) {
+                itemPrice = product.size_prices[size];
+            }
+
+            if (existing) {
+                existing.quantity += 1;
+            } else {
+                cart.push({ 
+                    id: product.id,
+                    name: product.name, 
+                    price: itemPrice, 
+                    quantity: 1, 
+                    size: size || null,
+                    category: 'test'
+                });
+            }
+            
+            console.log('Cart after add:', cart);
+            updateCart();
+        }
+
+        function updateCart() {
+            console.log('updateCart called, cart length:', cart.length);
+            const orderItemsDiv = document.getElementById('orderItems');
+            orderItemsDiv.innerHTML = '';
+
+            if (cart.length === 0) {
+                orderItemsDiv.innerHTML = '<p>Cart is empty</p>';
+            } else {
+                let html = '<ul>';
+                cart.forEach(item => {
+                    html += `<li>${item.name} ${item.size ? '(' + item.size + ')' : ''} - ₱${item.price} x ${item.quantity}</li>`;
+                });
+                html += '</ul>';
+                orderItemsDiv.innerHTML = html;
+            }
+        }
+    </script>
+</body>
+</html>
