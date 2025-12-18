@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Minimal pre-push hook to auto-run static-only check.
+# This will amend the last commit to include [ci skip] when appropriate.
+set -euo pipefail
+
+# Run the helper script (ignore errors to not block push unncessarily)
+./scripts/skip_ci_if_static_changes.sh || true
+
+# Always allow push to continue (the helper will suggest force-push when needed)
+exit 0
