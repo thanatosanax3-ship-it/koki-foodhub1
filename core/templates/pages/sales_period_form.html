@@ -1,0 +1,44 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Record Sales Period - Koki's Foodhub{% endblock %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 40px auto; padding: 20px;">
+  <h1 style="margin-bottom: 30px; color: var(--fg);">Record Sales Report</h1>
+  
+  <div style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+    <form id="reportForm" method="POST" style="display: flex; flex-direction: column; gap: 20px;">
+      {% csrf_token %}
+      
+      <div>
+        <label style="display: block; font-weight: 700; margin-bottom: 12px; color: var(--fg);">
+          Select Period:
+        </label>
+        <div style="display: flex; gap: 15px;">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="radio" name="period" value="week" checked>
+            <span style="color: var(--fg);">This Week</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="radio" name="period" value="month">
+            <span style="color: var(--fg);">This Month</span>
+          </label>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 12px; padding-top: 20px; border-top: 1px solid var(--border);">
+        <button type="submit" name="action" value="print" style="width: 100%; padding: 12px; background: #FFD700; color: #000000; border: none; border-radius: 6px; font-weight: 700; font-size: 15px; cursor: pointer;">
+          🖨️ Generate & Print
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <div style="margin-top: 30px; padding: 20px; background: #FFFACD; border-radius: 8px; border-left: 4px solid #FFD700;">
+    <p style="margin: 0; color: #000000; font-size: 14px;">
+      <strong>ℹ️ How it works:</strong><br>
+      Click "Generate Report" to view sales summary for the selected period, or "Generate & Print" to open a printable version immediately.
+    </p>
+  </div>
+</div>
+{% endblock %}

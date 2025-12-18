@@ -1,0 +1,429 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Products - Koki's Foodhub{% endblock %}
+{% block nav_title %}Products{% endblock %}
+
+{% block content %}
+  <div style="margin-bottom: 28px;">
+    <h1 class="section-title">🍽️ Products</h1>
+    <p style="color: var(--text-secondary); margin: 0;">Browse and manage your menu items</p>
+  </div>
+
+  <div style="margin-bottom: 20px; display:flex; gap:12px; align-items:center; justify-content:space-between;">
+    <div style="display:flex; gap:12px; align-items:center;">
+      <label for="productListDropdown" style="font-weight:600;color:var(--text-secondary);margin-right:6px;">View</label>
+      <select id="productListDropdown" style="padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;font-weight:600;" onchange="location.search='?sort=' + this.value">
+        <option value="all" {% if sort == '' or sort == 'all' %}selected{% endif %}>All items</option>
+        <option value="newest" {% if sort == 'newest' %}selected{% endif %}>Sort: Newest</option>
+        <option value="price-asc" {% if sort == 'price-asc' %}selected{% endif %}>Price: Low → High</option>
+        <option value="price-desc" {% if sort == 'price-desc' %}selected{% endif %}>Price: High → Low</option>
+        <option value="name" {% if sort == 'name' %}selected{% endif %}>Sort: Name A → Z</option>
+      </select>
+    </div>
+
+    <div style="display:flex; gap:12px; align-items:center;">
+      <button class="btn primary" onclick="openAddProductModal()">➕ Add Product</button>
+      <button id="addCategoryBtn" class="btn" title="Add Category" style="display:inline-flex;align-items:center;gap:8px;padding:10px 16px;font-weight:700;">🏷️ Add Category</button>
+    </div>
+  </div>
+
+  {% if products %}
+    <div id="productGrid" class="product-grid">
+      {% for p in products %}
+        <div class="product-card" data-price="{{ p.price }}" data-name="{{ p.name|escapejs }}" data-created="{% if p.created_at %}{{ p.created_at|date:'U' }}{% else %}{{ p.id }}{% endif %}">
+          <div class="product-image">
+            {% if p.image %}
+              <img src="{% url 'product_image' p.id %}" alt="{{ p.name }}" onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\"font-size:44px\">🍲</div>'">
+            {% else %}
+              <div style="font-size:44px">🍲</div>
+            {% endif %}
+          </div>
+          <div class="product-info">
+            <h3 class="product-name">{{ p.name }}</h3>
+            <p class="product-category">{{ p.category }}</p>
+            <p class="product-price">₱{{ p.price }}</p>
+            <div style="margin-top: auto; display: flex; gap: 8px;">
+              <a class="btn" href="{% url 'product_update' p.id %}" style="flex: 1; font-size: 12px;">✏️ Edit</a>
+              <form method="post" action="{% url 'product_delete' p.id %}" style="flex: 1;" onsubmit="return confirm('Delete this product?');">
+                {% csrf_token %}
+                <button class="btn danger" type="submit" style="width: 100%; font-size: 12px;">🗑️</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="card" style="text-align: center; padding: 48px 24px;">
+      <p style="color: var(--text-secondary); font-size: 16px; margin-bottom: 20px;">No products yet. Create your first product to get started.</p>
+      <button class="btn primary" onclick="openAddProductModal()">➕ Create Product</button>
+    </div>
+  {% endif %}
+
+  <!-- Add Product Modal -->
+  <div id="addProductModal" class="modal" style="display: none;">
+    <div class="modal-overlay"></div>
+    <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
+      <form id="productForm" method="post" action="{% url 'product_create' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <div class="modal-header">
+          <h2>Add New Item</h2>
+          <button class="modal-close" type="button">✕</button>
+        </div>
+        
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="id_name">Name</label>
+            <input type="text" id="id_name" name="name" required>
+          </div>
+
+          <div class="form-group">
+            <label for="id_category">Category</label>
+            <select id="id_category" name="category" required>
+              <option value="">Select category</option>
+              <option value="Main">Main</option>
+              <option value="Appetizer">Appetizer</option>
+              <option value="Beverage">Beverage</option>
+              <option value="Dessert">Dessert</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="id_price">Price (₱)</label>
+            <input type="number" id="id_price" name="price" step="0.01" required>
+          </div>
+
+          <div class="form-group">
+            <label for="id_image">Product Image</label>
+            <input type="file" id="id_image" name="image" accept="image/*">
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="submit" class="btn primary" style="width: 100%;">➕ Add Item</button>
+          <button type="button" class="btn modal-cancel" style="width: 100%; margin-top: 8px;">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      function showTempBanner(text){
+        try{
+          var existing = document.getElementById('temp-sort-banner');
+          if(existing) existing.remove();
+          var el = document.createElement('div');
+          el.id = 'temp-sort-banner';
+          el.textContent = text;
+          el.style.position = 'fixed';
+          el.style.top = '84px';
+          el.style.left = '24px';
+          el.style.zIndex = 1200;
+          el.style.background = 'rgba(0,0,0,0.75)';
+          el.style.color = '#fff';
+          el.style.padding = '8px 12px';
+          el.style.borderRadius = '8px';
+          el.style.fontWeight = 700;
+          document.body.appendChild(el);
+          setTimeout(function(){ try{ el.remove(); }catch(e){} }, 1400);
+        }catch(e){ console.log('banner error', e); }
+      }
+
+      try{
+        var btn = document.getElementById('addCategoryBtn');
+        if(btn){
+          btn.addEventListener('click', function(e){
+            e.preventDefault();
+            try{
+              var name = prompt('Enter new category name:');
+              if(!name) return;
+              name = name.trim();
+              if(!name) return;
+              var sel = document.querySelector('#addProductModal #id_category') || document.getElementById('id_category');
+              if(!sel){
+                alert('Category selector not found. Open Add Product modal first.');
+                return;
+              }
+              var exists = Array.from(sel.options).some(function(o){ return o.value.toLowerCase() === name.toLowerCase(); });
+              if(exists){
+                for(var i=0;i<sel.options.length;i++){ if(sel.options[i].value.toLowerCase()===name.toLowerCase()){ sel.selectedIndex = i; break; } }
+                return;
+              }
+              var opt = document.createElement('option');
+              opt.value = name;
+              opt.text = name;
+              sel.appendChild(opt);
+              sel.value = name;
+              var modal = document.getElementById('addProductModal');
+              if(modal && modal.style.display === 'none'){
+                if(typeof openAddProductModal === 'function'){
+                  openAddProductModal();
+                } else {
+                  modal.style.display = 'flex';
+                }
+              }
+            }catch(ex){ console.error('addCategory error', ex); }
+          });
+        }
+      }catch(e){ console.error('addCategory init error', e); }
+
+      try{
+        var dropdown = document.getElementById('productListDropdown');
+        if(!dropdown) return;
+        dropdown.addEventListener('change', function(){
+          try{
+            var val = dropdown.value;
+            console.log('productListDropdown change ->', val);
+            var grid = document.getElementById('productGrid');
+            if(!grid){ console.warn('productGrid not found'); return; }
+            var cards = Array.from(grid.querySelectorAll('.product-card'));
+            if(val === 'all'){
+              showTempBanner('Showing: All items');
+              return;
+            }
+            if(val === 'newest'){
+              cards.sort(function(a,b){
+                var ia = parseInt(a.getAttribute('data-created')||0,10);
+                var ib = parseInt(b.getAttribute('data-created')||0,10);
+                return ib - ia;
+              });
+              showTempBanner('Sorted: Newest first');
+            }
+            if(val === 'price-asc' || val === 'price-desc'){
+              cards.sort(function(a,b){
+                var pa = parseFloat((a.getAttribute('data-price')||'').toString().replace(/[^0-9.\-]/g,'')) || 0;
+                var pb = parseFloat((b.getAttribute('data-price')||'').toString().replace(/[^0-9.\-]/g,'')) || 0;
+                return val === 'price-asc' ? pa - pb : pb - pa;
+              });
+              showTempBanner(val === 'price-asc' ? 'Sorted: Price Low → High' : 'Sorted: Price High → Low');
+            } else if(val === 'name'){
+              cards.sort(function(a,b){
+                var na = (a.getAttribute('data-name')||'').toLowerCase();
+                var nb = (b.getAttribute('data-name')||'').toLowerCase();
+                return na < nb ? -1 : (na > nb ? 1 : 0);
+              });
+              showTempBanner('Sorted: Name A → Z');
+            }
+            cards.forEach(function(c){ grid.appendChild(c); });
+          }catch(inner){ console.error('dropdown change error', inner); }
+        });
+      }catch(e){ console.error('dropdown init error', e); }
+    })();
+  </script>
+
+  <style>
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 18px;
+    }
+
+    .product-card {
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 6px 18px rgba(15,23,42,0.04);
+      display: flex;
+      flex-direction: column;
+      min-height: 260px;
+    }
+
+    .product-image {
+      width: 100%;
+      height: 160px;
+      background: #f3f4f6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .product-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .product-info {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1 1 auto;
+    }
+
+    .product-name {
+      margin: 0;
+      font-weight: 800;
+      font-size: 16px;
+      color: #071029;
+    }
+
+    .product-category {
+      margin: 0;
+      font-size: 12px;
+      color: #666;
+    }
+
+    .product-price {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 900;
+      color: #ff6a00;
+    }
+
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      cursor: pointer;
+    }
+
+    .modal-content {
+      position: relative;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      width: 90%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 24px 28px;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #666;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .modal-close:hover {
+      background: #f0f0f0;
+      color: #000;
+    }
+
+    .modal-body {
+      padding: 28px;
+      display: grid;
+      gap: 20px;
+    }
+
+    .form-group {
+      display: grid;
+      gap: 8px;
+    }
+
+    .form-group label {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .form-group input,
+    .form-group select {
+      padding: 10px 14px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+      background: #fff;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: #ff6a00;
+      box-shadow: 0 0 0 3px rgba(255, 106, 0, 0.1);
+    }
+
+    .modal-footer {
+      padding: 20px 28px;
+      border-top: 1px solid #ddd;
+    }
+  </style>
+
+  <script>
+    function openAddProductModal() {
+      document.getElementById('addProductModal').style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeAddProductModal() {
+      const modal = document.getElementById('addProductModal');
+      const form = document.getElementById('productForm');
+      
+      if (modal && modal.style.display === 'flex') {
+        document.body.style.overflow = 'auto';
+        modal.style.display = 'none';
+        form.reset();
+      }
+    }
+
+    const modalClose = document.querySelector('.modal-close');
+    if (modalClose) {
+      modalClose.addEventListener('click', function() {
+        closeAddProductModal();
+      });
+    }
+
+    const modalCancel = document.querySelector('.modal-cancel');
+    if (modalCancel) {
+      modalCancel.addEventListener('click', function() {
+        closeAddProductModal();
+      });
+    }
+
+    const modalOverlay = document.querySelector('.modal-overlay');
+    if (modalOverlay) {
+      modalOverlay.addEventListener('click', function() {
+        closeAddProductModal();
+      });
+    }
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        closeAddProductModal();
+      }
+    });
+  </script>
+{% endblock %}

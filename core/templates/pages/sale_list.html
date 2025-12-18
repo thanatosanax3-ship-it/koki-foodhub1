@@ -1,0 +1,53 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Sales - Koki's Foodhub{% endblock %}
+
+{% block content %}
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px;">
+    <div>
+      <h1 class="section-title">Sales</h1>
+      <p style="color: var(--text-secondary); margin: 0;">Record and track your sales transactions.</p>
+    </div>
+    {% include "atoms/button.html" with href="/sales/create/" text="💰 Record Sale" variant="primary" %}
+  </div>
+
+  {% if sales %}
+    <div class="card" style="overflow-x: auto;">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Product</th>
+            <th>Units Sold</th>
+            <th>Revenue</th>
+            <th style="text-align: right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in sales %}
+            <tr>
+              <td><strong>{{ s.date|date:"M d, Y" }}</strong></td>
+              <td>{{ s.product.name }}</td>
+              <td><span class="badge">{{ s.units_sold }} units</span></td>
+              <td><strong>₱{{ s.revenue }}</strong></td>
+              <td style="text-align: right;">
+                <div class="table-actions" style="justify-content: flex-end;">
+                  <a class="btn" href="{% url 'sale_update' s.id %}">✏️ Edit</a>
+                  <form method="post" action="{% url 'sale_delete' s.id %}" style="display:inline;" onsubmit="return confirm('Delete this sale record?');">
+                    {% csrf_token %}
+                    <button class="btn danger" type="submit">🗑️ Delete</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="card" style="text-align: center; padding: 48px 24px;">
+      <p style="color: var(--text-secondary); font-size: 16px; margin-bottom: 20px;">No sales recorded yet. Record your first sale to get started.</p>
+      {% include "atoms/button.html" with href="/sales/create/" text="💰 Record Sale" variant="primary" %}
+    </div>
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}{{ title }} - Koki's Foodhub{% endblock %}
+
+{% block content %}
+  <div style="max-width: 640px;">
+    <h1 class="section-title">{{ title }}</h1>
+    
+    {% if confirm %}
+      <div class="card" style="border-color: var(--danger); border-left: 4px solid var(--danger);">
+        <p style="margin: 0 0 16px 0; color: var(--fg);">Are you sure you want to delete this sale record? This action cannot be undone.</p>
+        <form method="post" style="display: grid; gap: 12px; grid-template-columns: auto auto;">
+          {% csrf_token %}
+          <button class="btn danger" type="submit">🗑️ Confirm Delete</button>
+          <a href="{% url 'sale_list' %}" class="btn">Cancel</a>
+        </form>
+      </div>
+    {% else %}
+      <form class="form" method="post">
+        {% csrf_token %}
+        
+        {% if form.non_field_errors %}
+          <div class="alert alert-error">
+            {% for error in form.non_field_errors %}
+              <p style="margin: 0;">{{ error }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
+        
+        {% for field in form %}
+          <div class="field">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+              <div class="alert alert-error" style="margin: 0;">
+                {% for error in field.errors %}
+                  <p style="margin: 0; font-size: 13px;">{{ error }}</p>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+        {% endfor %}
+        
+        <div style="display: grid; grid-template-columns: auto auto; gap: 12px;">
+          <button class="btn primary" type="submit">💾 Save Sale</button>
+          <a href="{% url 'sale_list' %}" class="btn">Cancel</a>
+        </div>
+      </form>
+    {% endif %}
+  </div>
+{% endblock %}

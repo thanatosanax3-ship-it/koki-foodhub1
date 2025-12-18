@@ -1,0 +1,13 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+<div class="card">
+  <div class="page-header">
+    <h1>Product Forecast (offline)</h1>
+    <p class="muted">The interactive forecast dashboard is temporarily unavailable. You can still access the API endpoint for raw data: <code>/product-forecast/api/</code></p>
+  </div>
+  <div style="padding:16px;">
+    <p class="muted">This is a minimal fallback view to keep the endpoint functional while we diagnose the error. Please check logs for details.</p>
+    <p><a href="/product-forecast/api/" class="btn">View raw forecast JSON</a></p>
+  </div>
+</div>
+{% endblock %}

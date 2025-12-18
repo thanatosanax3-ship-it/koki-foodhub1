@@ -1,0 +1,525 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Sales Dashboard - Koki's Foodhub{% endblock %}
+
+{% block content %}
+  <div style="padding: 24px 20px; background: #f5f5f5; min-height: 100vh;">
+    <!-- Header -->
+    <div style="margin-bottom: 24px;">
+      <h2 style="margin: 0 0 4px 0; font-size: 20px; font-weight: 700; color: var(--fg);">Sales Dashboard</h2>
+      <p style="margin: 0; font-size: 14px; color: var(--text-secondary);">Track sales, revenue, and customer purchases</p>
+    </div>
+
+    <!-- Stats Cards -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <div style="font-size: 14px; color: var(--text-secondary);">Show totals for:</div>
+      <div style="display: flex; gap: 12px; align-items: center;">
+        <div style="display: flex; gap:8px;">
+          <button id="filterAll" class="btn small" style="padding:8px 12px; border-radius:6px; background:#fff; border:1px solid var(--border);">All time</button>
+          <button id="filterDay" class="btn small" style="padding:8px 12px; border-radius:6px; background:#fff; border:1px solid var(--border);">Today</button>
+          <button id="filterWeek" class="btn small" style="padding:8px 12px; border-radius:6px; background:#fff; border:1px solid var(--border);">Last 7 days</button>
+        </div>
+        <div id="serverTimeContainer" style="font-size:12px; color:var(--text-secondary); padding:4px 8px; background:#fff; border-radius:6px; border:1px solid var(--border);">
+          Server time: <span id="serverTimeLabel">—</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 24px;">
+      <!-- Total Sales Card -->
+      <div style="background: #fff; padding: 20px; border-radius: 8px; box-shadow: var(--shadow-sm);">
+        <div style="display: flex; justify-content: space-between; align-items: start;">
+          <div>
+            <p style="margin: 0 0 8px 0; font-size: 12px; color: var(--text-secondary); font-weight: 600;">Total Sales</p>
+            <p style="margin: 0; font-size: 28px; font-weight: 700; color: var(--fg);" id="totalSales">₱0.00</p>
+            <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--success);">+0% from last week</p>
+          </div>
+          <span style="font-size: 32px;">💰</span>
+        </div>
+      </div>
+
+      <!-- Total Orders Card -->
+      <div style="background: #fff; padding: 20px; border-radius: 8px; box-shadow: var(--shadow-sm);">
+        <div style="display: flex; justify-content: space-between; align-items: start;">
+          <div>
+            <p style="margin: 0 0 8px 0; font-size: 12px; color: var(--text-secondary); font-weight: 600;">Total Orders</p>
+            <p style="margin: 0; font-size: 28px; font-weight: 700; color: var(--fg);" id="totalOrders">0</p>
+            <p style="margin: 4px 0 0 0; font-size: 11px; color: var(--text-secondary);" id="ordersTimeframe">All time</p>
+            <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--success);">+0% from last week</p>
+          </div>
+          <span style="font-size: 32px;">📦</span>
+        </div>
+      </div>
+
+      <!-- Avg Order Value Card -->
+      <div style="background: #fff; padding: 20px; border-radius: 8px; box-shadow: var(--shadow-sm);">
+        <div style="display: flex; justify-content: space-between; align-items: start;">
+          <div>
+            <p style="margin: 0 0 8px 0; font-size: 12px; color: var(--text-secondary); font-weight: 600;">Avg Order Value</p>
+            <p style="margin: 0; font-size: 28px; font-weight: 700; color: var(--fg);" id="avgOrderValue">₱0.00</p>
+            <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--success);">+0% from last week</p>
+          </div>
+          <span style="font-size: 32px;">📊</span>
+        </div>
+      </div>
+
+      <!-- Popular Item Card -->
+      <div style="background: #fff; padding: 20px; border-radius: 8px; box-shadow: var(--shadow-sm);">
+        <div style="display: flex; justify-content: space-between; align-items: start;">
+          <div>
+            <p style="margin: 0 0 8px 0; font-size: 12px; color: var(--text-secondary); font-weight: 600;">Most Popular</p>
+            <p style="margin: 0; font-size: 18px; font-weight: 700; color: var(--fg);" id="popularItem">-</p>
+            <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-secondary);" id="popularCount">0 sold</p>
+          </div>
+          <span style="font-size: 32px;">⭐</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sales by Product -->
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 24px;">
+      <!-- Sales History Table -->
+      <div style="background: #fff; padding: 20px; border-radius: 8px; box-shadow: var(--shadow-sm);">
+        <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 700; color: var(--fg);">Recent Sales History</h3>
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <thead>
+              <tr style="border-bottom: 2px solid var(--border);">
+                <th style="text-align: left; padding: 12px 8px; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; font-size: 11px;">Item</th>
+                <th style="text-align: center; padding: 12px 8px; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; font-size: 11px;">Qty</th>
+                <th style="text-align: right; padding: 12px 8px; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; font-size: 11px;">Price</th>
+                <th style="text-align: right; padding: 12px 8px; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; font-size: 11px;">Total</th>
+                <th style="text-align: right; padding: 12px 8px; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; font-size: 11px;">Time</th>
+              </tr>
+            </thead>
+            <tbody id="salesHistoryTable">
+              <tr>
+                <td colspan="5" style="padding: 40px 8px; text-align: center; color: var(--text-secondary);">No sales yet. Start selling!</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Top Selling Items -->
+      <div style="background: #fff; padding: 20px; border-radius: 8px; box-shadow: var(--shadow-sm);">
+        <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 700; color: var(--fg);">Top Selling Items</h3>
+        <div id="topItemsList" style="display: flex; flex-direction: column; gap: 12px;">
+          <p style="text-align: center; color: var(--text-secondary); padding: 20px 0;">No sales data</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sales by Category -->
+    <div style="background: #fff; padding: 20px; border-radius: 8px; box-shadow: var(--shadow-sm); margin-bottom: 24px;">
+      <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 700; color: var(--fg);">Sales by Category</h3>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;" id="categorySales">
+        <p style="text-align: center; color: var(--text-secondary); padding: 20px 0; grid-column: 1 / -1;">No sales data</p>
+      </div>
+    </div>
+  </div>
+  {# Server-side JSON payloads for the client script - use json_script to safely embed #}
+  {{ recent_sales|json_script:"recent-sales-data" }}
+  {{ top_items|json_script:"top-items-data" }}
+  {{ category_sales|json_script:"category-sales-data" }}
+  {{ total_sales|json_script:"total-sales-data" }}
+  {{ total_orders|json_script:"total-orders-data" }}
+  {{ avg_order|json_script:"avg-order-data" }}
+  {{ daily_sales|json_script:"daily-sales-data" }}
+  {{ weekly_sales|json_script:"weekly-sales-data" }}
+  {{ today_label|json_script:"today-label-data" }}
+  {{ today_orders|json_script:"today-orders-data" }}
+  {{ today_revenue|json_script:"today-revenue-data" }}
+  {{ server_today_iso|json_script:"server-today-iso" }}
+
+  <script>
+    /*
+      Client contract (server -> client JSON payloads):
+      - `recent_sales`: list of recent sale objects [{item, qty, price, total, time}]
+      - `top_items`: list of top items [{product, units, revenue}]
+      - `category_sales`: list of categories [{category, quantity, revenue}]
+      - `total_sales`: number (all-time total revenue)
+      - `total_orders`: number (all-time total orders)
+      - `avg_order`: number (all-time average order value)
+      - `daily_sales`: list of day objects [{day: ISO-date or date, revenue, orders}] (ordered ascending)
+      - `weekly_sales`: list of week objects [{week_start, revenue, orders}]
+      - `today_label`: server date label for "today" (ISO date)
+      - `today_orders`: integer orders for server-defined today
+      - `today_revenue`: float revenue for server-defined today
+      - `server_today_iso`: ISO8601 datetime string representing server 'now'
+
+      The client prefers explicit `today_*` fields when present to avoid timezone/date mismatches.
+    */
+    // Use server-provided data when available; fall back to localStorage
+    const serverRecent = JSON.parse(document.getElementById('recent-sales-data')?.textContent || 'null');
+    const serverTop = JSON.parse(document.getElementById('top-items-data')?.textContent || 'null');
+    const serverCategory = JSON.parse(document.getElementById('category-sales-data')?.textContent || 'null');
+    const totalSalesServer = parseFloat(document.getElementById('total-sales-data')?.textContent || '0');
+    const totalOrdersServer = parseInt(document.getElementById('total-orders-data')?.textContent || '0');
+    const avgOrderServer = parseFloat(document.getElementById('avg-order-data')?.textContent || '0');
+    const serverDaily = JSON.parse(document.getElementById('daily-sales-data')?.textContent || 'null');
+    const serverWeekly = JSON.parse(document.getElementById('weekly-sales-data')?.textContent || 'null');
+    const todayLabelServer = JSON.parse(document.getElementById('today-label-data')?.textContent || 'null');
+    const todayOrdersServer = parseInt(document.getElementById('today-orders-data')?.textContent || '0');
+    const todayRevenueServer = parseFloat(document.getElementById('today-revenue-data')?.textContent || '0');
+    const serverTodayIso = JSON.parse(document.getElementById('server-today-iso')?.textContent || 'null');
+
+    // Normalize server recent_sales into the shape the client-side code expects:
+    // salesHistory is an array of sales where each sale has an `items` array
+    let salesHistory = [];
+    if (serverRecent && Array.isArray(serverRecent) && serverRecent.length) {
+      salesHistory = serverRecent.map(s => ({
+        items: [{ name: s.item, quantity: s.qty, price: s.price, category: s.category || 'Other' }],
+        timestamp: s.time || '' ,
+        total: s.total || (s.price * s.qty)
+      }));
+    } else {
+      salesHistory = JSON.parse(localStorage.getItem('salesHistory') || '[]');
+    }
+
+    function renderTotals() {
+      document.getElementById('totalSales').textContent = '₱' + (totalSalesServer || salesHistory.reduce((sum, s) => sum + (s.total || 0), 0)).toFixed(2);
+      document.getElementById('totalOrders').textContent = (totalOrdersServer || salesHistory.length);
+      document.getElementById('avgOrderValue').textContent = '₱' + (avgOrderServer || (salesHistory.length ? (salesHistory.reduce((sum, s) => sum + (s.total || 0), 0) / salesHistory.length) : 0)).toFixed(2);
+    }
+
+    function renderPopularFromServer() {
+      // If server provided top items, use that for the 'Most Popular' card
+      if (serverTop && Array.isArray(serverTop) && serverTop.length) {
+        const top = serverTop[0];
+        document.getElementById('popularItem').textContent = top.product || '-';
+        document.getElementById('popularCount').textContent = (top.units || 0) + ' sold';
+      }
+    }
+
+    function updateSalesHistoryTable() {
+      const tbody = document.getElementById('salesHistoryTable');
+      if (salesHistory.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="padding: 40px 8px; text-align: center; color: var(--text-secondary);">No sales yet. Start selling!</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = '';
+      const allItems = [];
+      salesHistory.forEach(sale => {
+        if (sale.items) {
+          sale.items.forEach(item => {
+            allItems.push({
+              name: item.name,
+              quantity: item.quantity,
+              price: item.price,
+              saleTime: sale.timestamp || new Date().toLocaleTimeString(),
+              saleTotal: (item.price || 0) * (item.quantity || 0)
+            });
+          });
+        }
+      });
+
+      allItems.reverse().forEach(item => {
+        const row = document.createElement('tr');
+        row.style.borderBottom = '1px solid var(--border)';
+        row.style.transition = 'background 0.2s ease';
+        row.addEventListener('mouseenter', () => row.style.background = '#f9f9f9');
+        row.addEventListener('mouseleave', () => row.style.background = 'transparent');
+        row.innerHTML = `
+          <td style="padding: 12px 8px; color: var(--fg); font-weight: 500;">${item.name}</td>
+          <td style="padding: 12px 8px; text-align: center; color: var(--text-secondary);">${item.quantity}</td>
+          <td style="padding: 12px 8px; text-align: right; color: var(--text-secondary);">₱${(item.price || 0).toFixed(2)}</td>
+          <td style="padding: 12px 8px; text-align: right; color: var(--accent); font-weight: 600;">₱${(item.saleTotal || 0).toFixed(2)}</td>
+          <td style="padding: 12px 8px; text-align: right; color: var(--text-secondary); font-size: 12px;">${item.saleTime}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function updateTopItemsList() {
+      const container = document.getElementById('topItemsList');
+      // Prefer server-provided top items
+      if (serverTop && Array.isArray(serverTop) && serverTop.length) {
+        container.innerHTML = '';
+        serverTop.forEach((it, index) => {
+          const div = document.createElement('div');
+          div.style.cssText = 'padding: 12px; background: #f9f9f9; border-radius: 6px; border-left: 3px solid var(--accent);';
+          div.innerHTML = `
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+              <span style="font-weight: 600; color: var(--fg);">${index + 1}. ${it.product}</span>
+              <span style="color: var(--accent); font-weight: 700;">${it.units}</span>
+            </div>
+            <div style="font-size: 12px; color: var(--text-secondary);">Revenue: ₱${(it.revenue || 0).toFixed(2)}</div>
+          `;
+          container.appendChild(div);
+        });
+        return;
+      }
+
+      // Fallback: compute from salesHistory
+      const itemCounts = {};
+      salesHistory.forEach(sale => {
+        if (sale.items) {
+          sale.items.forEach(item => {
+            if (!itemCounts[item.name]) {
+              itemCounts[item.name] = { quantity: 0, price: item.price || 0, revenue: 0 };
+            }
+            itemCounts[item.name].quantity += item.quantity || 0;
+            itemCounts[item.name].revenue += (item.price || 0) * (item.quantity || 0);
+          });
+        }
+      });
+
+      const topItems = Object.entries(itemCounts).sort((a, b) => b[1].quantity - a[1].quantity).slice(0, 5);
+      if (topItems.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 20px 0;">No sales data</p>';
+        return;
+      }
+      container.innerHTML = '';
+      topItems.forEach((item, index) => {
+        const div = document.createElement('div');
+        div.style.cssText = 'padding: 12px; background: #f9f9f9; border-radius: 6px; border-left: 3px solid var(--accent);';
+        div.innerHTML = `
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span style="font-weight: 600; color: var(--fg);">${index + 1}. ${item[0]}</span>
+            <span style="color: var(--accent); font-weight: 700;">${item[1].quantity}</span>
+          </div>
+          <div style="font-size: 12px; color: var(--text-secondary);">Revenue: ₱${item[1].revenue.toFixed(2)}</div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function updateCategorySales() {
+      const container = document.getElementById('categorySales');
+
+      if (serverCategory && Array.isArray(serverCategory) && serverCategory.length) {
+        container.innerHTML = '';
+        serverCategory.forEach(cat => {
+          const div = document.createElement('div');
+          div.style.cssText = 'padding: 16px; background: linear-gradient(135deg, var(--accent) 0%, #ff7043 100%); border-radius: 8px; color: white;';
+          div.innerHTML = `
+            <p style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600;">${cat.category}</p>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+              <span style="font-size: 12px;">Items Sold</span>
+              <span style="font-weight: 700;">${cat.quantity}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="font-size: 12px;">Revenue</span>
+              <span style="font-weight: 700;">₱${(cat.revenue || 0).toFixed(2)}</span>
+            </div>
+          `;
+          container.appendChild(div);
+        });
+        return;
+      }
+
+      // Fallback: compute from salesHistory
+      const categorySales = {};
+      salesHistory.forEach(sale => {
+        if (sale.items) {
+          sale.items.forEach(item => {
+            const category = item.category || 'Other';
+            if (!categorySales[category]) categorySales[category] = { quantity: 0, revenue: 0 };
+            categorySales[category].quantity += item.quantity || 0;
+            categorySales[category].revenue += (item.price || 0) * (item.quantity || 0);
+          });
+        }
+      });
+
+      if (!Object.keys(categorySales).length) {
+        container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 20px 0; grid-column: 1 / -1;">No sales data</p>';
+        return;
+      }
+
+      container.innerHTML = '';
+      const categories = Object.entries(categorySales).sort((a, b) => b[1].revenue - a[1].revenue);
+      categories.forEach(([category, data]) => {
+        const div = document.createElement('div');
+        div.style.cssText = 'padding: 16px; background: linear-gradient(135deg, var(--accent) 0%, #ff7043 100%); border-radius: 8px; color: white;';
+        div.innerHTML = `
+          <p style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600;">${category}</p>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+            <span style="font-size: 12px;">Items Sold</span>
+            <span style="font-weight: 700;">${data.quantity}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="font-size: 12px;">Revenue</span>
+            <span style="font-weight: 700;">₱${data.revenue.toFixed(2)}</span>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    // Initial render
+    renderTotals();
+    renderPopularFromServer();
+    updateSalesHistoryTable();
+    updateTopItemsList();
+    updateCategorySales();
+
+    // Render server time label if available
+    function renderServerTimeLabel() {
+      const container = document.getElementById('serverTimeContainer');
+      const label = document.getElementById('serverTimeLabel');
+      if (!label) return;
+      if (serverTodayIso) {
+        try {
+          const dt = new Date(serverTodayIso);
+          // Use user's locale for display, include date + time
+          const formatted = dt.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+          label.textContent = formatted;
+          container.style.display = 'inline-block';
+        } catch (err) {
+          label.textContent = serverTodayIso;
+        }
+      } else {
+        // Hide the container if server time not available
+        if (container) container.style.display = 'none';
+      }
+    }
+    renderServerTimeLabel();
+
+    // Fetch today's totals from the new JSON endpoint as a fallback/refresh.
+    // Uses same-origin credentials so session auth (cookie) is sent.
+    function fetchTodayFromApi() {
+      if (!window.fetch) return Promise.resolve(null);
+      return fetch('/api/sales/today/', { credentials: 'same-origin' })
+        .then(r => {
+          if (!r.ok) throw new Error('api error ' + r.status);
+          return r.json();
+        })
+        .then(data => ({ orders: parseInt(data.orders || 0), revenue: parseFloat(data.revenue || 0), iso: data.server_today_iso }))
+        .catch(err => {
+          console.debug('fetchTodayFromApi failed', err);
+          return null;
+        });
+    }
+
+    // Timeframe filter buttons
+    function setActiveButton(id) {
+      ['filterAll', 'filterDay', 'filterWeek'].forEach(b => {
+        const el = document.getElementById(b);
+        if (!el) return;
+        if (b === id) {
+          el.style.borderColor = 'var(--accent)';
+          el.style.background = 'linear-gradient(90deg,var(--accent),#ff7043)';
+          el.style.color = 'white';
+        } else {
+          el.style.borderColor = 'var(--border)';
+          el.style.background = '#fff';
+          el.style.color = '';
+        }
+      });
+    }
+
+    function applyTimeframe(range) {
+      // range: 'all' | 'day' | 'week'
+      if (range === 'all') {
+        document.getElementById('ordersTimeframe').textContent = 'All time';
+        document.getElementById('totalOrders').textContent = (totalOrdersServer || salesHistory.length);
+        document.getElementById('totalSales').textContent = '₱' + (totalSalesServer || salesHistory.reduce((sum, s) => sum + (s.total || 0), 0)).toFixed(2);
+        document.getElementById('avgOrderValue').textContent = '₱' + (avgOrderServer || (salesHistory.length ? (salesHistory.reduce((sum, s) => sum + (s.total || 0), 0) / salesHistory.length) : 0)).toFixed(2);
+        setActiveButton('filterAll');
+        return;
+      }
+
+      if (range === 'day') {
+          // Compute today's date in local time as YYYY-MM-DD to avoid UTC mismatches
+          function localISODate(dt) {
+            const y = dt.getFullYear();
+            const m = String(dt.getMonth() + 1).padStart(2, '0');
+            const d = String(dt.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+          }
+          // Prefer the latest serverDaily entry as "today" (server timezone may differ from client)
+          let entry = null;
+          if (serverDaily && Array.isArray(serverDaily) && serverDaily.length) {
+            entry = serverDaily[serverDaily.length - 1];
+          } else {
+            // Fallback: try matching local ISO date
+            const todayISO = localISODate(new Date());
+            if (serverDaily && Array.isArray(serverDaily)) {
+              entry = serverDaily.find(d => (d.day || '').slice(0,10) === todayISO) || null;
+            }
+        }
+        // Prefer server-provided explicit today totals when available
+        let orders = (typeof todayOrdersServer === 'number' && todayOrdersServer > 0) ? todayOrdersServer : (entry ? (entry.orders || entry.total_orders || 0) : 0);
+        let revenue = (typeof todayRevenueServer === 'number' && todayRevenueServer > 0) ? todayRevenueServer : (entry ? (entry.revenue || entry.total_revenue || 0) : 0);
+        document.getElementById('ordersTimeframe').textContent = 'Today';
+        document.getElementById('totalOrders').textContent = orders;
+        document.getElementById('totalSales').textContent = '₱' + (revenue || 0).toFixed(2);
+        document.getElementById('avgOrderValue').textContent = '₱' + ((orders > 0) ? (revenue / orders).toFixed(2) : '0.00');
+        setActiveButton('filterDay');
+
+        // Try a live fetch from the API to ensure we reflect the server's current totals
+        fetchTodayFromApi().then(api => {
+          if (!api) return; // keep current display
+          // If API reports values (or is more recent), update the UI
+          if (typeof api.orders === 'number') {
+            orders = api.orders;
+            document.getElementById('totalOrders').textContent = orders;
+          }
+          if (typeof api.revenue === 'number') {
+            revenue = api.revenue;
+            document.getElementById('totalSales').textContent = '₱' + (revenue || 0).toFixed(2);
+            document.getElementById('avgOrderValue').textContent = '₱' + ((orders > 0) ? (revenue / orders).toFixed(2) : '0.00');
+          }
+          // If API returned a server ISO, refresh the server time label
+          if (api.iso) {
+            try {
+              const dt = new Date(api.iso);
+              document.getElementById('serverTimeLabel').textContent = dt.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+            } catch (err) { /* ignore */ }
+          }
+        });
+        return;
+      }
+
+      if (range === 'week') {
+        // Sum last 7 days from serverDaily if available
+          // Sum the most recent 7 entries from serverDaily if available (server may report different date range)
+          let ordersSum = 0;
+          let revenueSum = 0;
+          if (serverDaily && Array.isArray(serverDaily) && serverDaily.length) {
+            const lastSeven = serverDaily.slice(Math.max(0, serverDaily.length - 7));
+            lastSeven.forEach(d => {
+              ordersSum += (d.orders || d.total_orders || 0);
+              revenueSum += (d.revenue || d.total_revenue || 0);
+            });
+        } else if (salesHistory && salesHistory.length) {
+          // fallback: sum salesHistory totals
+          ordersSum = salesHistory.length;
+          revenueSum = salesHistory.reduce((s, r) => s + (r.total || 0), 0);
+        }
+        document.getElementById('ordersTimeframe').textContent = 'Last 7 days';
+        document.getElementById('totalOrders').textContent = ordersSum;
+        document.getElementById('totalSales').textContent = '₱' + (revenueSum || 0).toFixed(2);
+        document.getElementById('avgOrderValue').textContent = '₱' + ((ordersSum > 0) ? (revenueSum / ordersSum).toFixed(2) : '0.00');
+        setActiveButton('filterWeek');
+        return;
+      }
+    }
+
+    document.getElementById('filterAll')?.addEventListener('click', () => applyTimeframe('all'));
+    document.getElementById('filterDay')?.addEventListener('click', () => applyTimeframe('day'));
+    document.getElementById('filterWeek')?.addEventListener('click', () => applyTimeframe('week'));
+
+    // Default to 'all' on load and apply its numbers
+    applyTimeframe('all');
+
+    // Listen for localStorage updates (still supported)
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'salesHistory') {
+        try {
+          salesHistory = JSON.parse(e.newValue) || [];
+        } catch (err) {
+          salesHistory = [];
+        }
+        renderTotals();
+        updateSalesHistoryTable();
+        updateTopItemsList();
+        updateCategorySales();
+      }
+    });
+  </script>
+
+  
+{% endblock %}

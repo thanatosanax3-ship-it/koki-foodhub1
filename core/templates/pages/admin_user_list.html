@@ -1,0 +1,156 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}User Management - Koki's Foodhub{% endblock %}
+{% block nav_title %}User Management{% endblock %}
+
+{% block content %}
+  <div style="margin-bottom: 24px;">
+    <h1 class="section-title">👥 Users</h1>
+    <p style="color: var(--text-secondary); margin: 0;">Toggle group membership for Admin and Cashier roles.</p>
+  </div>
+
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
+    <div>
+      <a href="{% url 'admin:auth_user_add' %}" class="btn primary" style="padding:8px 14px; font-weight:700;">➕ Add user</a>
+    </div>
+    <div style="color:var(--text-secondary); font-size:13px">Total users: {{ users|length }}</div>
+  </div>
+
+  <div class="card">
+    <table style="width:100%; border-collapse: collapse;">
+      <thead>
+        <tr style="text-align:left; border-bottom:1px solid var(--border);">
+          <th style="padding:12px">User</th>
+          <th style="padding:12px">Email</th>
+          <th style="padding:12px">Groups</th>
+          <th style="padding:12px; width:300px">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ui in users %}
+          {% with u=ui.user %}
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:12px">{{ u.username }}{% if u.is_staff %} <span style="color:var(--accent); font-weight:700;">(owner)</span>{% endif %}</td>
+            <td style="padding:12px">{{ u.email }}</td>
+            <td style="padding:12px">{{ u.groups.all|join:", " }}</td>
+            <td style="padding:12px">
+              <div style="display:flex; gap:8px; align-items:center;">
+                {% comment %} Admin toggle {% endcomment %}
+                <form class="toggle-group-form" method="post" action="{% url 'admin_toggle_group' %}" style="display:inline;" data-user-id="{{ u.id }}" data-group="Admin">
+                  {% csrf_token %}
+                  <input type="hidden" name="user_id" value="{{ u.id }}">
+                  <input type="hidden" name="group" value="Admin">
+                  {% if ui.is_admin %}
+                    <input type="hidden" name="action" value="remove">
+                    <button class="btn" type="submit" style="background:#ffecec;color:#a00;border:1px solid #f5c6cb;">Remove Admin</button>
+                  {% else %}
+                    <input type="hidden" name="action" value="add">
+                    <button class="btn primary" type="submit">Make Admin</button>
+                  {% endif %}
+                </form>
+
+                {% comment %} Cashier toggle {% endcomment %}
+                <form class="toggle-group-form" method="post" action="{% url 'admin_toggle_group' %}" style="display:inline;" data-user-id="{{ u.id }}" data-group="Cashier">
+                  {% csrf_token %}
+                  <input type="hidden" name="user_id" value="{{ u.id }}">
+                  <input type="hidden" name="group" value="Cashier">
+                  {% if ui.is_cashier %}
+                    <input type="hidden" name="action" value="remove">
+                    <button class="btn" type="submit">Remove Cashier</button>
+                  {% else %}
+                    <input type="hidden" name="action" value="add">
+                    <button class="btn" type="submit">Make Cashier</button>
+                  {% endif %}
+                </form>
+
+                {# Edit / Delete links (admin) #}
+                <a href="{% url 'admin:auth_user_change' u.id %}" class="btn" style="margin-left:6px;">Edit</a>
+                <a href="{% url 'admin:auth_user_delete' u.id %}" class="btn" style="background:#ffecec;color:#a00;border:1px solid #f5c6cb; margin-left:4px;">Delete</a>
+              </div>
+            </td>
+          </tr>
+          {% endwith %}
+        {% empty %}
+          <tr>
+            <td colspan="4" style="padding:16px; text-align:center; color:var(--text-secondary);">No users found.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    (function(){
+      function findCsrfToken(form){
+        var input = form.querySelector('input[name=csrfmiddlewaretoken]');
+        return input ? input.value : null;
+      }
+
+      function onToggleSubmit(e){
+        e.preventDefault();
+        var form = e.currentTarget;
+        var url = form.getAttribute('action');
+        var userId = form.dataset.userId;
+        var group = form.dataset.group;
+        var data = new FormData(form);
+        var csrf = findCsrfToken(form);
+
+        fetch(url, {
+          method: 'POST',
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': csrf || ''
+          },
+          body: data,
+          credentials: 'same-origin'
+        }).then(function(resp){
+          if(!resp.ok) throw new Error('Network error');
+          return resp.json();
+        }).then(function(json){
+          if(json.status !== 'ok') throw new Error(json.message || 'Error');
+          // Find the pair of forms for this user and update UI
+          var userForms = document.querySelectorAll('.toggle-group-form[data-user-id="'+json.user_id+'"]');
+          userForms.forEach(function(f){
+            var g = f.dataset.group;
+            var btn = f.querySelector('button');
+            var actionInput = f.querySelector('input[name=action]');
+            if(g === json.group){
+              // Toggle the action and button text
+              if(actionInput.value === 'add'){
+                actionInput.value = 'remove';
+                if(btn) btn.textContent = (g === 'Admin') ? 'Remove Admin' : 'Remove Cashier';
+                btn.classList.remove('primary');
+              } else {
+                actionInput.value = 'add';
+                if(btn) btn.textContent = (g === 'Admin') ? 'Make Admin' : 'Make Cashier';
+                btn.classList.add('primary');
+              }
+            } else {
+              // For the other group form, ensure its state reflects json flags
+              var otherAction = f.querySelector('input[name=action]');
+              if(g === 'Admin'){
+                if(json.is_admin){ otherAction.value = 'remove'; f.querySelector('button').textContent = 'Remove Admin'; f.querySelector('button').classList.remove('primary'); }
+                else { otherAction.value = 'add'; f.querySelector('button').textContent = 'Make Admin'; f.querySelector('button').classList.add('primary'); }
+              }
+              if(g === 'Cashier'){
+                if(json.is_cashier){ otherAction.value = 'remove'; f.querySelector('button').textContent = 'Remove Cashier'; f.querySelector('button').classList.remove('primary'); }
+                else { otherAction.value = 'add'; f.querySelector('button').textContent = 'Make Cashier'; f.querySelector('button').classList.add('primary'); }
+              }
+            }
+          });
+        }).catch(function(err){
+          console.error('Toggle failed', err);
+          alert('Failed to update role: ' + (err.message || 'Unknown'));
+        });
+      }
+
+      document.addEventListener('DOMContentLoaded', function(){
+        var forms = document.querySelectorAll('.toggle-group-form');
+        forms.forEach(function(f){ f.addEventListener('submit', onToggleSubmit); });
+      });
+    })();
+  </script>
+{% endblock %}

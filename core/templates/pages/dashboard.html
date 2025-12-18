@@ -1,0 +1,1110 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Dashboard - Koki's Foodhub{% endblock %}
+
+{% block content %}
+  {% csrf_token %}
+  <!-- Top Navigation Bar -->
+  <div style="background: #fff; border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span style="font-size: 24px;">🍕</span>
+      <h1 style="margin: 0; font-size: 18px; font-weight: 700; color: var(--fg);">Koki's Foodhub</h1>
+    </div>
+    <a href="{% url 'logout' %}" style="padding: 10px 16px; background: transparent; color: #666; text-decoration: none; border: 1px solid var(--border); border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s ease;" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='transparent'">Logout</a>
+  </div>
+
+  <div style="display: flex; gap: 0; min-height: calc(100vh - 60px); padding: 0; background: #f5f5f5;">
+    <!-- Left: Search & Products Area -->
+    <div style="flex: 1; padding: 24px; overflow-y: auto;">
+      <!-- Search Box Header -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; background: #e8e8f0; padding: 20px; border-radius: 12px;">
+        <div style="flex: 1;">
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+            <span style="font-size: 24px;">🔍</span>
+            <h2 style="margin: 0; font-size: 18px; font-weight: 700; color: var(--fg);">Search Products</h2>
+          </div>
+          <input type="text" id="searchInput" placeholder="Search menu items..." style="width: 100%; padding: 14px 16px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; background: #fff;">
+        </div>
+        <!-- Add Item button removed per user request -->
+      </div>
+
+      <!-- Category Filter Tabs -->
+      <div style="display: flex; gap: 12px; margin-bottom: 24px; overflow-x: auto; padding-bottom: 8px;">
+        <button class="category-filter active" data-category="All" style="padding: 10px 20px; border: none; background: #fff; cursor: pointer; font-weight: 600; font-size: 14px; color: #374151; border-radius: 20px; transition: all 0.2s ease; white-space: nowrap; border: 1px solid var(--border);">
+          All
+        </button>
+        {% for category in categories %}
+        <button class="category-filter" data-category="{{ category }}" style="padding: 10px 20px; border: none; background: transparent; cursor: pointer; font-weight: 600; font-size: 14px; color: var(--text-secondary); border-radius: 20px; transition: all 0.2s ease; white-space: nowrap; border: 1px solid var(--border);">
+          {{ category }}
+        </button>
+        {% endfor %}
+      </div>
+
+      <!-- Product Grid - 3 columns; auto height so it can use bottom space -->
+      <style>
+        /* Dashboard product card styles matching product-list appearance */
+        #productGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; padding-right:8px; align-content:start; }
+        .product-card { position: relative; border: 1px solid #e9eef2; border-radius: 12px; overflow: hidden; background: #fff; cursor: pointer; transition: all 0.18s ease; box-shadow: 0 6px 18px rgba(15,23,42,0.04); display:flex; flex-direction:column; min-height:300px; }
+        .product-card .product-image { width:100%; height:160px; overflow:hidden; flex-shrink:0; position:relative; }
+        .product-card .product-image img { width:100%; height:100%; object-fit:cover; display:block; }
+        .product-card .name-strip { position: relative; z-index: 3; background: #fff; padding: 14px 16px; margin-top: -34px; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; box-shadow: 0 6px 12px rgba(15,23,42,0.06); }
+        .product-card h3 { margin:0; font-weight:800; font-size:16px; color:#071029; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; white-space:normal; line-height:1.1; }
+        .product-card .price-row { background: #ffffff; padding: 16px 18px 20px 18px; display:flex; justify-content:space-between; align-items:center; gap:12px; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }
+        .product-card .price { margin:0; font-size:16px; font-weight:900; color:#dc2626; }
+        .product-card .cat-pill { display:inline-block; padding:7px 12px; background:#ffffff; color:#0f172a; border-radius:999px; font-size:13px; border:1px solid #ececec; }
+        /* Size selector styles */
+        .product-size-selector { display:flex; gap:8px; align-items:center; }
+        .product-size-selector .size-option { padding:6px 10px; border-radius:8px; border:2px solid #000000; background: #ffffff; color: #000000; font-weight:700; font-size:11px; text-transform: uppercase; cursor: pointer; letter-spacing: 0.5px; transition: all 0.2s ease; }
+        .product-size-selector .size-option.active { background: #FFD700; color: #000000; box-shadow: 0 4px 8px rgba(255, 215, 0, 0.3); }
+        .product-size-selector .size-option:hover { transform: scale(1.05); }
+      </style>
+
+      <div id="productGrid">
+        {% for product in all_products %}
+        <div class="product-card" data-category="{{ product.category }}" data-id="{{ product.id }}" data-name="{{ product.name }}" data-price="{{ product.price }}">
+          <button aria-label="remove" style="position: absolute; top: 10px; right: 10px; width: 26px; height: 26px; border-radius: 999px; border: none; background: rgba(239,68,68,0.06); color: #ef4444; font-weight: 700; font-size: 14px; cursor: pointer; display:flex; align-items:center; justify-content:center;">✕</button>
+          {% if product.image %}
+            <div class="product-image"><img src="{{ product.image }}" alt="{{ product.name }}"></div>
+          {% else %}
+            <div class="product-image"><div style="font-size:44px">🍽️</div></div>
+          {% endif %}
+
+          <div class="name-strip">
+            <h3 title="{{ product.name }}">{{ product.name }}</h3>
+          </div>
+
+          <div class="price-row">
+            <p class="price">₱{{ product.price|floatformat:2 }}</p>
+            <span class="cat-pill">{{ product.category }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Global size selector (applies to clicking any product with sizes) -->
+      <div style="display:flex; justify-content:center; margin-top: 10px; margin-bottom: 6px;">
+        <div id="globalSizeSelector" class="product-size-selector" style="display:flex; gap:8px; background:#fff; padding:12px; border-radius:8px; box-shadow: 0 6px 12px rgba(15,23,42,0.04);">
+          <button type="button" class="size-option active" data-size="Regular">REGULAR</button>
+          <button type="button" class="size-option" data-size="M">MEDIUM</button>
+          <button type="button" class="size-option" data-size="L">LARGE</button>
+          <button type="button" class="size-option" data-size="XL">XL</button>
+          <button type="button" class="size-option" data-size="XXL">XXL</button>
+        </div>
+      </div>
+
+      <!-- Pagination Controls -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding: 10px; background: #f9f9f9; border-radius: 8px;">
+        <div style="display: flex; gap: 8px;">
+          <button id="prevBtn" style="padding: 8px 12px; background: #ffffff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; color: var(--fg);">← Prev</button>
+          <button id="nextBtn" style="padding: 8px 12px; background: #ffffff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; color: var(--fg);">Next →</button>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <select id="itemsPerPage" style="padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; cursor: pointer; background: #fff;">
+            <option value="6" selected>6 per page</option>
+            <option value="12">12 per page</option>
+            <option value="24">24 per page</option>
+            <option value="48">48 per page</option>
+          </select>
+        </div>
+        <div style="font-size: 12px; color: var(--text-secondary); font-weight: 600;" id="pageInfo">Page 1</div>
+      </div>
+
+      <!-- Bottom logout button removed per request -->
+    </div>
+
+    <!-- Right: Transaction Cart -->
+
+
+    <!-- Right: Transaction Cart -->
+    <div style="width: 480px; background: #fff; padding: 24px; display: flex; flex-direction: column; box-shadow: -4px 0 16px rgba(0,0,0,0.1); overflow-y: auto; position: sticky; top: 20px; align-self: flex-start; height: calc(100vh - 40px);">
+      <!-- Order History Section at Top -->
+      <div style="margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 18px;">📋</span>
+            <h3 style="margin: 0; font-size: 13px; font-weight: 700; color: var(--fg);">Order History</h3>
+          </div>
+          <button id="printOrderBtn" type="button" style="padding: 5px 10px; background: #FFD700; color: #000000; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 11px; display: flex; align-items: center; gap: 4px; transition: all 0.2s ease;">
+            🖨️ Print
+          </button>
+        </div>
+        <div id="orderHistory" style="max-height: 120px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; background: #f9f9f9; padding: 10px; font-size: 11px;">
+          <div style="text-align: center; padding: 16px 8px; color: var(--text-secondary);">
+            <p style="margin: 0; font-size: 10px;">No orders yet</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Header with Badge -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span style="font-size: 24px;">🛒</span>
+          <h2 style="margin: 0; font-size: 18px; font-weight: 700; color: var(--fg);">Transaction Cart</h2>
+        </div>
+        <div style="background: #0066FF; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px;" id="cartCount">0</div>
+      </div>
+
+      <!-- Cart Items -->
+      <div style="flex: 1; overflow-y: auto; margin-bottom: 20px; border: 1px solid var(--border); border-radius: 8px; padding: 16px; background: #f9f9f9; min-height: 200px;" id="orderItems">
+        <div style="text-align: center; padding: 40px 20px;">
+          <div style="font-size: 48px; margin-bottom: 12px;">🛒</div>
+          <p style="margin: 0 0 4px 0; color: var(--text-secondary); font-weight: 600;">Cart is empty</p>
+          <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">Search and select products to begin</p>
+        </div>
+      </div>
+
+      <!-- Divider -->
+      <div style="height: 1px; background: var(--border); margin-bottom: 20px;"></div>
+
+      <!-- Summary Section -->
+      <div style="margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 13px;">
+          <span style="color: var(--text-secondary);">Subtotal:</span>
+          <span style="font-weight: 600; color: var(--fg);" id="subtotal">₱0.00</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 16px; font-size: 13px;">
+          <span style="color: var(--text-secondary);">Discount: <span style="color: #16a34a;">₱0.00</span></span>
+          <span style="font-weight: 600; color: var(--fg);" id="discount">₱0.00</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 12px; background: #e8f5f0; border-radius: 8px; margin-bottom: 20px; border-top: 3px solid #16a34a;">
+          <span style="font-weight: 700; color: var(--fg); font-size: 16px;">TOTAL:</span>
+          <span style="font-weight: 700; color: #000000; font-size: 20px;" id="total">₱0.00</span>
+        </div>
+      </div>
+
+      <!-- Amount Paid & Change -->
+      <div style="margin-bottom: 20px;">
+        <label style="display: block; margin-bottom: 8px; font-size: 12px; font-weight: 600; color: var(--fg);">Amount Paid:</label>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <span style="color: var(--text-secondary); font-weight: 600;">₱</span>
+          <input type="number" id="amountPaid" placeholder="0.00" style="flex: 1; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px;">
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f0f0f0; border-radius: 8px; margin-bottom: 20px;">
+        <span style="font-weight: 600; color: var(--fg); font-size: 13px;">Change:</span>
+        <span style="font-weight: 700; color: #000000; font-size: 18px;" id="change">₱0.00</span>
+      </div>
+
+      <!-- Customer Name -->
+      <input type="text" placeholder="Customer name (Optional)" style="width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; margin-bottom: 16px; background: #f9f9f9;">
+
+      <!-- Process Button -->
+      <button id="checkoutBtn" type="button" style="width: 100%; padding: 14px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s ease;">
+        <span>🖨️</span>PRINT RECEIPT
+      </button>
+    </div>
+  </div>
+
+  <script>
+    let cart = [];
+    let currentPage = 1;
+    let itemsPerPage = 6;
+    let filteredProducts = [];
+    let orderCounter = 0;  // Counter for order numbers
+    let currentOrderItems = [];  // Store current order items for kitchen print
+
+    // Build products object from Django template data
+    const products = {};
+    {% for product in all_products %}
+    products[{{ product.id }}] = {
+      id: {{ product.id }},
+      name: '{{ product.name }}',
+      category: '{{ product.category }}',
+      price: {{ product.price }},
+      quantity: {{ product.quantity|default:0 }}
+    };
+    {% endfor %}
+
+    // Get all product cards
+    const allProductCards = Array.from(document.querySelectorAll('.product-card'));
+    
+    // Initialize filtered products with all products
+    filteredProducts = allProductCards;
+
+    function updatePagination() {
+      const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+      filteredProducts = allProductCards.filter(card => {
+        const name = card.dataset.name.toLowerCase();
+        return name.includes(searchTerm);
+      });
+
+      currentPage = 1;
+      displayPage();
+    }
+
+    function displayPage() {
+      const startIndex = (currentPage - 1) * itemsPerPage;
+      const endIndex = startIndex + itemsPerPage;
+      const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+
+      // Hide all products
+      allProductCards.forEach(card => card.style.display = 'none');
+
+      // Show current page products
+      filteredProducts.slice(startIndex, endIndex).forEach(card => {
+        card.style.display = 'flex';
+      });
+
+      // Update pagination info
+      const showing = filteredProducts.length > 0 ? `${startIndex + 1}-${Math.min(endIndex, filteredProducts.length)} of ${filteredProducts.length}` : '0';
+      document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages || 1} (${showing})`;
+
+      // Update button states
+      document.getElementById('prevBtn').disabled = currentPage === 1;
+      document.getElementById('nextBtn').disabled = currentPage === totalPages || totalPages === 0;
+      document.getElementById('prevBtn').style.opacity = currentPage === 1 ? '0.5' : '1';
+      document.getElementById('nextBtn').style.opacity = (currentPage === totalPages || totalPages === 0) ? '0.5' : '1';
+      
+      // Reattach product card listeners for visible cards
+      setupProductCardListeners();
+    }
+    
+    function setupProductCardListeners() {
+      allProductCards.forEach(card => {
+        // Remove existing listeners by cloning and replacing
+        if (card.style.display === 'flex') {
+          card.addEventListener('click', handleProductCardClick);
+        }
+      });
+    }
+    
+    function handleProductCardClick(e) {
+      // Don't trigger if clicking the remove button
+      if (e.target.closest('button[aria-label="remove"]')) return;
+      const card = this;
+      const product = products[card.dataset.id];
+      if (product) {
+        const selectedSize = document.querySelector('.size-option.active')?.dataset.size || 'Regular';
+        addToCart(product, selectedSize);
+      }
+    }
+
+    document.getElementById('searchInput').addEventListener('input', updatePagination);
+
+    // Category filtering
+    function setupCategoryFilters() {
+      document.querySelectorAll('.category-filter').forEach(btn => {
+        btn.addEventListener('click', () => {
+          // Update active tab style
+          document.querySelectorAll('.category-filter').forEach(b => {
+            b.style.background = 'transparent';
+            b.style.color = 'var(--text-secondary)';
+            b.style.borderColor = 'var(--border)';
+          });
+          btn.style.background = '#fff';
+          btn.style.color = '#374151';
+          btn.style.borderColor = '#0066FF';
+
+          // Filter products by category
+          const selectedCategory = btn.dataset.category;
+          const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+          
+          if (selectedCategory === 'All') {
+            filteredProducts = allProductCards.filter(card => 
+              card.dataset.name.toLowerCase().includes(searchTerm)
+            );
+          } else {
+            filteredProducts = allProductCards.filter(card => 
+              card.dataset.category === selectedCategory && 
+              card.dataset.name.toLowerCase().includes(searchTerm)
+            );
+          }
+          
+          currentPage = 1;
+          displayPage();
+        });
+      });
+    }
+    setupCategoryFilters();
+
+    document.getElementById('searchInput').addEventListener('input', updatePagination);
+
+    document.getElementById('prevBtn').addEventListener('click', () => {
+      if (currentPage > 1) {
+        currentPage--;
+        displayPage();
+        document.getElementById('productGrid').scrollTop = 0;
+      }
+    });
+
+    document.getElementById('nextBtn').addEventListener('click', () => {
+      const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+      if (currentPage < totalPages) {
+        currentPage++;
+        displayPage();
+        document.getElementById('productGrid').scrollTop = 0;
+      }
+    });
+
+    document.getElementById('itemsPerPage').addEventListener('change', (e) => {
+      itemsPerPage = parseInt(e.target.value);
+      currentPage = 1;
+      displayPage();
+    });
+
+    // Size selector event listeners
+    function setupSizeSelectors() {
+      document.querySelectorAll('.size-option').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          // Update active state
+          document.querySelectorAll('.size-option').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+        });
+      });
+    }
+
+    // Initial setup
+    setupProductCardListeners();
+    setupSizeSelectors();
+    setupCategoryFilters();
+
+    function addToCart(product, size = 'Regular') {
+      // Calculate size-based price multiplier
+      const sizeMultipliers = {
+        'Regular': 0,
+        'M': 5,
+        'L': 10,
+        'XL': 15,
+        'XXL': 20
+      };
+      
+      const priceAdjustment = sizeMultipliers[size] || 0;
+      const adjustedPrice = product.price + priceAdjustment;
+
+      const existing = cart.find(item => item.id === product.id && item.size === size);
+
+      if (existing) {
+          // Prevent exceeding available inventory
+          const avail = (products[existing.id] && products[existing.id].quantity) || 0;
+          if (existing.quantity + 1 > avail) {
+            alert(`Cannot add more of ${existing.name}: only ${avail} available`);
+            return;
+          }
+          existing.quantity += 1;
+      } else {
+          // Check availability before adding
+          const avail = (products[product.id] && products[product.id].quantity) || 0;
+          if (avail <= 0) {
+            alert(`Cannot add ${product.name}: item is out of stock`);
+            return;
+          }
+          cart.push({ ...product, quantity: 1, size: size, price: adjustedPrice });
+      }
+      updateCart();
+    }
+
+    function updateCart() {
+      const orderItemsDiv = document.getElementById('orderItems');
+      orderItemsDiv.innerHTML = '';
+
+      if (cart.length === 0) {
+        orderItemsDiv.innerHTML = `
+          <div style="text-align: center; padding: 40px 20px;">
+            <div style="font-size: 48px; margin-bottom: 12px;">🛒</div>
+            <p style="margin: 0 0 4px 0; color: var(--text-secondary); font-weight: 600;">Cart is empty</p>
+            <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">Search and select products to begin</p>
+          </div>
+        `;
+        document.getElementById('cartCount').textContent = '0';
+      } else {
+        cart.forEach(item => {
+          const itemDiv = document.createElement('div');
+          itemDiv.style.cssText = 'display: flex; gap: 12px; align-items: center; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--border);';
+          const sizeLabel = item.size && item.size !== 'Regular' ? ` (${item.size})` : '';
+          itemDiv.innerHTML = `
+            <button class="delete-item" data-id="${item.id}" data-size="${item.size || 'Regular'}" style="padding: 4px 6px; background: #ff4444; color: white; border: none; cursor: pointer; font-size: 14px; border-radius: 3px; font-weight: 700; flex-shrink: 0; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;" title="Delete item">✕</button>
+            <div style="flex: 1;">
+              <p style="margin: 0 0 4px 0; font-weight: 600; font-size: 12px; color: var(--fg);">${item.name}${sizeLabel}</p>
+              <p style="margin: 0; font-size: 13px; color: ##000000; font-weight: 700;">₱${item.price.toFixed(2)}</p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <button class="qty-minus" data-id="${item.id}" data-size="${item.size || 'Regular'}" style="padding: 2px 5px; background: #ffffff; border: none; cursor: pointer; font-size: 12px; color: var(--fg); border-radius: 3px; font-weight: 700;">−</button>
+              <span style="padding: 4px 8px; font-weight: 600; color: var(--fg); font-size: 12px; min-width: 28px; text-align: center; background: var(--muted); border-radius: 3px;">${item.quantity}</span>
+              <button class="qty-plus" data-id="${item.id}" data-size="${item.size || 'Regular'}" style="padding: 2px 5px; background: #ffffff; border: none; cursor: pointer; font-size: 12px; color: var(--fg); border-radius: 3px; font-weight: 700;">+</button>
+            </div>
+          `;
+          orderItemsDiv.appendChild(itemDiv);
+        });
+
+        document.getElementById('cartCount').textContent = cart.length;
+
+        document.querySelectorAll('.delete-item').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = parseInt(btn.dataset.id);
+            const size = btn.dataset.size || 'Regular';
+            cart = cart.filter(p => !(p.id === id && p.size === size));
+            updateCart();
+          });
+        });
+
+        document.querySelectorAll('.qty-plus').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = parseInt(btn.dataset.id);
+            const size = btn.dataset.size || 'Regular';
+            const item = cart.find(p => p.id === id && p.size === size);
+            if (item) {
+              const avail = (products[item.id] && products[item.id].quantity) || 0;
+              if (item.quantity + 1 > avail) {
+                alert(`Cannot increase ${item.name}: only ${avail} available`);
+                return;
+              }
+              item.quantity++;
+            }
+            updateCart();
+          });
+        });
+
+        document.querySelectorAll('.qty-minus').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = parseInt(btn.dataset.id);
+            const size = btn.dataset.size || 'Regular';
+            const item = cart.find(p => p.id === id && p.size === size);
+            if (item) {
+              item.quantity--;
+              if (item.quantity === 0) {
+                cart = cart.filter(p => !(p.id === id && p.size === size));
+              }
+            }
+            updateCart();
+          });
+        });
+      }
+
+      updateSummary();
+
+      // Disable + buttons when item reaches available inventory
+      document.querySelectorAll('.qty-plus').forEach(btn => {
+        const id = parseInt(btn.dataset.id);
+        const size = btn.dataset.size || 'Regular';
+        const item = cart.find(p => p.id === id && p.size === size);
+        const avail = (products[id] && products[id].quantity) || 0;
+        if (item && item.quantity >= avail) {
+          btn.disabled = true;
+          btn.style.opacity = '0.5';
+          btn.title = `Max available: ${avail}`;
+        } else {
+          btn.disabled = false;
+          btn.style.opacity = '1';
+          btn.title = '';
+        }
+      });
+    }
+
+    function updateSummary() {
+      const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      const discount = 0;
+      const total = subtotal - discount;
+
+      document.getElementById('subtotal').textContent = '₱' + subtotal.toFixed(2);
+      document.getElementById('discount').textContent = '₱' + discount.toFixed(2);
+      document.getElementById('total').textContent = '₱' + total.toFixed(2);
+      updateChange();
+    }
+
+    function updateChange() {
+      const amountPaid = parseFloat(document.getElementById('amountPaid').value) || 0;
+      const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      const change = Math.max(0, amountPaid - total);
+      document.getElementById('change').textContent = '₱' + change.toFixed(2);
+    }
+
+    function generateAndPrintReceipt(customerName, items, total, amountPaid, change) {
+      const receiptNum = Math.floor(Math.random() * 1000000);
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+      const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+      const receiptContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>Receipt #${receiptNum}</title>
+          <style>
+            * { margin: 0; padding: 0; }
+            body { 
+              font-family: 'Courier New', 'Monaco', monospace; 
+              background: white; 
+              color: black;
+              padding: 0;
+              line-height: 1.2;
+            }
+            .container {
+              width: 80mm;
+              max-width: 100%;
+              margin: 0 auto;
+              padding: 10px 0;
+            }
+            .header {
+              text-align: center;
+              border-bottom: 2px solid black;
+              padding-bottom: 10px;
+              margin-bottom: 10px;
+            }
+            .store-name {
+              font-size: 18px;
+              font-weight: bold;
+              letter-spacing: 1px;
+            }
+            .store-tagline {
+              font-size: 9px;
+              margin-top: 2px;
+              color: #333;
+            }
+            .receipt-number {
+              font-size: 10px;
+              margin-top: 5px;
+            }
+            .separator {
+              border-bottom: 1px dashed black;
+              margin: 8px 0;
+            }
+            .separator-solid {
+              border-bottom: 2px solid black;
+              margin: 8px 0;
+            }
+            .info {
+              font-size: 10px;
+              margin-bottom: 8px;
+            }
+            .info-line {
+              display: flex;
+              justify-content: space-between;
+              margin: 2px 0;
+            }
+            .items-header {
+              display: flex;
+              justify-content: space-between;
+              font-weight: bold;
+              font-size: 10px;
+              margin-bottom: 5px;
+              border-bottom: 1px solid black;
+              padding-bottom: 3px;
+            }
+            .items-header span:nth-child(1) { flex: 1; }
+            .items-header span:nth-child(2) { width: 30px; text-align: center; }
+            .items-header span:nth-child(3) { width: 50px; text-align: right; }
+            .item {
+              display: flex;
+              justify-content: space-between;
+              font-size: 10px;
+              margin: 3px 0;
+              border-bottom: 1px dotted #ccc;
+              padding-bottom: 2px;
+            }
+            .item-name {
+              flex: 1;
+              word-break: break-word;
+            }
+            .item-qty {
+              width: 30px;
+              text-align: center;
+              font-weight: bold;
+            }
+            .item-price {
+              width: 50px;
+              text-align: right;
+              font-weight: bold;
+            }
+            .totals {
+              margin: 10px 0;
+              font-size: 11px;
+            }
+            .total-line {
+              display: flex;
+              justify-content: space-between;
+              margin: 3px 0;
+            }
+            .total-label {
+              flex: 1;
+            }
+            .total-value {
+              width: 70px;
+              text-align: right;
+              font-weight: bold;
+            }
+            .grand-total {
+              display: flex;
+              justify-content: space-between;
+              font-size: 13px;
+              font-weight: bold;
+              margin-top: 5px;
+              padding-top: 5px;
+              border-top: 2px solid black;
+            }
+            .payment {
+              font-size: 10px;
+              margin: 8px 0;
+            }
+            .payment-line {
+              display: flex;
+              justify-content: space-between;
+              margin: 2px 0;
+            }
+            .footer {
+              text-align: center;
+              font-size: 9px;
+              margin-top: 10px;
+              padding-top: 10px;
+              border-top: 1px dashed black;
+            }
+            .footer p {
+              margin: 2px 0;
+            }
+            @media print {
+              body { margin: 0; padding: 0; }
+              .container { width: 100%; max-width: 100%; }
+              * { background: white !important; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="store-name">🍕 KOKI'S FOODHUB</div>
+              <div class="store-tagline">Fresh Delicious Pizza</div>
+              <div class="receipt-number">RECEIPT #${receiptNum}</div>
+            </div>
+
+            <div class="info">
+              <div class="info-line">
+                <span>${dateStr}</span>
+                <span>${timeStr}</span>
+              </div>
+              <div class="info-line">
+                <span>Customer:</span>
+                <span style="font-weight: bold;">${customerName}</span>
+              </div>
+            </div>
+
+            <div class="separator"></div>
+
+            <div>
+              <div class="items-header">
+                <span>ITEM</span>
+                <span>QTY</span>
+                <span>PRICE</span>
+              </div>
+              ${items.map(item => `
+                <div class="item">
+                  <div class="item-name">${item.name}</div>
+                  <div class="item-qty">${item.quantity}</div>
+                  <div class="item-price">₱${(item.price * item.quantity).toFixed(2)}</div>
+                </div>
+              `).join('')}
+            </div>
+
+            <div class="separator-solid"></div>
+
+            <div class="totals">
+              <div class="total-line">
+                <span class="total-label">Subtotal:</span>
+                <span class="total-value">₱${total.toFixed(2)}</span>
+              </div>
+              <div class="grand-total">
+                <span>TOTAL:</span>
+                <span>₱${total.toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div class="payment">
+              <div class="payment-line">
+                <span>Amount Paid:</span>
+                <span style="font-weight: bold;">₱${amountPaid.toFixed(2)}</span>
+              </div>
+              <div class="payment-line">
+                <span>Change:</span>
+                <span style="font-weight: bold;">₱${change.toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div class="footer">
+              <p style="font-weight: bold;">THANK YOU!</p>
+              <p>Please come again</p>
+              <p style="margin-top: 5px; font-size: 8px;">Powered by Koki's Foodhub System</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+      
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(receiptContent);
+      printWindow.document.close();
+      
+      setTimeout(() => {
+        printWindow.print();
+      }, 300);
+    }
+
+    function processPayment() {
+      if (cart.length === 0) {
+        alert('Please add items to cart first');
+        return;
+      }
+      const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      const total = subtotal;
+      const amountPaid = parseFloat(document.getElementById('amountPaid').value) || 0;
+      
+      if (amountPaid < total) {
+        alert('Insufficient payment');
+        return;
+      }
+      
+      // helper: read cookie (for csrftoken fallback)
+      function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+      }
+
+      // Send sale data to server (include credentials so session cookie is sent)
+      const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken') || '';
+      console.log('Using CSRF token:', csrfToken);
+
+      const payload = {
+        items: cart.map(item => ({ id: item.id, name: item.name, price: item.price, quantity: item.quantity }))
+      };
+      console.log('Posting sales payload:', payload);
+
+      fetch('/sales/api/create/', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+          items: cart.map(item => ({
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity
+          }))
+        })
+      })
+      .then(async response => {
+        // Handle non-success status codes
+        if (!response.ok) {
+          const text = await response.text();
+          console.error('Server returned status:', response.status);
+          console.error('Response body:', text);
+          try {
+            const errorData = JSON.parse(text);
+            throw new Error(errorData.error || `Server error: ${response.status}`);
+          } catch (e) {
+            throw new Error(`Server error (${response.status}): ${text.slice(0, 200)}`);
+          }
+        }
+        
+        // Parse successful response
+        const text = await response.text();
+        try {
+          return JSON.parse(text);
+        } catch (e) {
+          console.error('Failed to parse response:', text);
+          throw new Error('Invalid server response: ' + text.slice(0, 200));
+        }
+      })
+      .then(data => {
+        if (data && data.success) {
+          const change = amountPaid - total;
+          const customerName = document.querySelector('input[placeholder="Customer name (Optional)"]').value || 'Customer';
+          
+          // Persist sale to localStorage so Sales Dashboard (which reads localStorage) updates
+          const saleRecord = {
+            timestamp: new Date().toLocaleString(),
+            total: total,
+            items: cart.map(i => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity, category: (products[i.id] && products[i.id].category) || '' }))
+          };
+          try {
+            const existing = JSON.parse(localStorage.getItem('salesHistory')) || [];
+            existing.push(saleRecord);
+            localStorage.setItem('salesHistory', JSON.stringify(existing));
+            // Also dispatch a storage event for other tabs/windows
+            try { window.dispatchEvent(new Event('storage')); } catch (e) {}
+          } catch (e) {
+            console.warn('Failed to persist salesHistory to localStorage', e);
+          }
+
+          // Clear cart and inputs
+          const itemsCopy = [...cart];
+          cart = [];
+          document.getElementById('amountPaid').value = '';
+          document.querySelector('input[placeholder="Customer name (Optional)"]').value = '';
+          updateCart();
+
+          // Display the recent transaction items in order history
+          displayRecentTransaction(itemsCopy);
+          
+          // Generate and print receipt
+          generateAndPrintReceipt(customerName, itemsCopy, total, amountPaid, change);
+        } else {
+          alert('Error: ' + (data && data.error ? data.error : 'Failed to process payment'));
+        }
+      })
+      .catch(error => {
+        console.error('Error processing payment:', error);
+        // Try to detect insufficient inventory errors and auto-correct the cart
+        const msg = error.message || '';
+        const insufficientRegex = /Insufficient inventory for ([^.]+)\. Available: (\d+), Requested: (\d+)/i;
+        const m = msg.match(insufficientRegex);
+        if (m) {
+          const prodName = m[1].trim();
+          const avail = parseInt(m[2], 10) || 0;
+          alert(`Insufficient inventory for ${prodName}. Adjusting cart to available quantity (${avail}).`);
+          // Find matching cart items by name and reduce quantity
+          cart.forEach(it => {
+            if (it.name && it.name.toLowerCase() === prodName.toLowerCase()) {
+              if (avail <= 0) {
+                // remove item
+                cart = cart.filter(p => !(p.id === it.id && p.size === it.size));
+              } else if (it.quantity > avail) {
+                it.quantity = avail;
+              }
+            }
+          });
+          updateCart();
+        } else {
+          alert('Error processing payment: ' + msg);
+        }
+      });
+    }
+
+    document.getElementById('amountPaid').addEventListener('input', updateChange);
+    // Wire checkout button
+    const checkoutBtn = document.getElementById('checkoutBtn');
+    if (checkoutBtn) {
+      checkoutBtn.addEventListener('click', processPayment);
+    }
+
+    // Initialize pagination display
+    displayPage();
+
+    // Display recent transaction items in order history
+    function displayRecentTransaction(items) {
+      const orderHistoryDiv = document.getElementById('orderHistory');
+      
+      if (!items || items.length === 0) {
+        orderHistoryDiv.innerHTML = '<div style="text-align: center; padding: 16px 8px; color: var(--text-secondary);"><p style="margin: 0; font-size: 10px;">No orders yet</p></div>';
+        currentOrderItems = [];
+        return;
+      }
+      
+      // Store current order items for kitchen print
+      currentOrderItems = items;
+      
+      // Increment order counter for each new order
+      orderCounter++;
+      
+      let html = `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 8px 12px 8px; border-bottom: 2px solid #FFD700; margin-bottom: 4px;">
+          <h4 style="margin: 0; font-size: 12px; font-weight: 700; color: var(--fg);">ORDER #${orderCounter}</h4>
+          <span style="background: #FFD700; color: #000; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700;">#${orderCounter}</span>
+        </div>
+      `;
+      
+      items.forEach(item => {
+        try {
+          html += `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #e0e0e0; gap: 8px;">
+              <div style="flex: 1; min-width: 0;">
+                <p style="margin: 0; font-weight: 600; color: var(--fg); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</p>
+              </div>
+              <div style="text-align: right; white-space: nowrap;">
+                <p style="margin: 0; font-weight: 700; color: var(--fg); font-size: 14px; background: #e8f5f0; padding: 2px 8px; border-radius: 4px;">x${item.quantity}</p>
+              </div>
+            </div>
+          `;
+        } catch (itemErr) {
+          console.warn('Error rendering item:', itemErr);
+        }
+      });
+      
+      if (html) {
+        orderHistoryDiv.innerHTML = html;
+        console.log('Recent transaction displayed: Order #' + orderCounter + ' with ' + items.length + ' items');
+      }
+    }
+
+    // Initialize - show empty order history
+    displayRecentTransaction([]);
+
+    // Print Kitchen Order Functionality
+    document.getElementById('printOrderBtn').addEventListener('click', function() {
+      if (currentOrderItems.length === 0) {
+        alert('No current order to print');
+        return;
+      }
+
+      // Get the order number from the order history display
+      const orderHistoryDiv = document.getElementById('orderHistory');
+      const orderNumberMatch = orderHistoryDiv.innerHTML.match(/ORDER #(\d+)/);
+      const orderNumber = orderNumberMatch ? orderNumberMatch[1] : '?';
+      const totalItems = currentOrderItems.reduce((sum, item) => sum + item.quantity, 0);
+      const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+      // Generate kitchen order ticket optimized for 80mm thermal printer
+      const kitchenHTML = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>Kitchen Order #${orderNumber}</title>
+          <style>
+            * { margin: 0; padding: 0; }
+            body { 
+              font-family: 'Courier New', 'Monaco', monospace; 
+              background: white;
+              color: black;
+              line-height: 1.3;
+            }
+            .container { 
+              width: 80mm;
+              max-width: 100%;
+              margin: 0 auto;
+              padding: 15px 0;
+            }
+            .header {
+              text-align: center;
+              border-bottom: 3px double #000;
+              margin-bottom: 15px;
+              padding-bottom: 12px;
+            }
+            .kitchen-label {
+              font-size: 14px;
+              font-weight: bold;
+              letter-spacing: 2px;
+              margin-bottom: 5px;
+            }
+            .order-number {
+              font-size: 32px;
+              font-weight: bold;
+              color: #000;
+              margin: 8px 0;
+              letter-spacing: 3px;
+            }
+            .time {
+              font-size: 11px;
+              margin-top: 5px;
+            }
+            .items-section {
+              margin: 15px 0;
+              border-bottom: 2px solid #000;
+              padding-bottom: 15px;
+            }
+            .item {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin: 8px 0;
+              font-size: 12px;
+              font-weight: bold;
+              padding: 5px 0;
+              border-bottom: 1px dotted #ccc;
+            }
+            .item-name {
+              flex: 1;
+              word-break: break-word;
+            }
+            .item-qty {
+              background: #000;
+              color: white;
+              padding: 4px 12px;
+              border-radius: 3px;
+              min-width: 45px;
+              text-align: center;
+              font-size: 14px;
+              font-weight: bold;
+              margin-left: 10px;
+            }
+            .summary {
+              margin: 15px 0;
+              text-align: center;
+              border-bottom: 1px dashed #000;
+              padding-bottom: 10px;
+            }
+            .summary-line {
+              font-size: 11px;
+              margin: 3px 0;
+            }
+            .total-items {
+              font-size: 13px;
+              font-weight: bold;
+              margin-top: 8px;
+            }
+            .footer {
+              text-align: center;
+              margin-top: 15px;
+              padding-top: 10px;
+              font-size: 12px;
+              font-weight: bold;
+              letter-spacing: 1px;
+            }
+            .footer p {
+              margin: 3px 0;
+            }
+            @media print { 
+              body { margin: 0; padding: 0; background: white; }
+              .container { width: 100%; margin: 0; }
+              * { background: white !important; color: black !important; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="kitchen-label">🍕 KITCHEN TICKET</div>
+              <div class="order-number">ORDER #${orderNumber}</div>
+              <div class="time">${timeStr}</div>
+            </div>
+            
+            <div class="items-section">
+              ${currentOrderItems.map(item => `
+                <div class="item">
+                  <div class="item-name">${item.name}</div>
+                  <div class="item-qty">x${item.quantity}</div>
+                </div>
+              `).join('')}
+            </div>
+
+            <div class="summary">
+              <div class="summary-line">TOTAL ITEMS:</div>
+              <div class="total-items">${totalItems}</div>
+            </div>
+
+            <div class="footer">
+              <p>PREPARE & SERVE</p>
+              <p style="margin-top: 8px; font-size: 10px;">---END OF ORDER---</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      // Open in new window and print
+      const printWindow = window.open('', '', 'height=600,width=500');
+      if (printWindow) {
+        printWindow.document.write(kitchenHTML);
+        printWindow.document.close();
+        // Trigger print after a delay to ensure content is rendered
+        setTimeout(() => {
+          printWindow.print();
+        }, 500);
+      } else {
+        alert('Unable to open print window. Please check your browser settings.');
+      }
+
+      // Clear order history after a delay
+      setTimeout(() => {
+        localStorage.removeItem('salesHistory');
+        document.getElementById('orderHistory').innerHTML = '<div style="text-align: center; padding: 16px 8px; color: var(--text-secondary);"><p style="margin: 0; font-size: 10px;">No orders yet</p></div>';
+      }, 2000);
+    });
+  </script>
+{% endblock %}

@@ -1,0 +1,7 @@
+{% if messages %}
+  <div style="position: sticky; top: 60px; z-index: 40;">
+    {% for message in messages %}
+      <div class="card" style="background: var(--accent); color:#000; font-weight:700;">{{ message }}</div>
+    {% endfor %}
+  </div>
+{% endif %}

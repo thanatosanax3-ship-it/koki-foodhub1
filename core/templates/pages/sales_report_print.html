@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Report - Koki's Foodhub</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            font-family: Arial, sans-serif;
+            background: white;
+            color: #000;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            padding: 20px;
+        }
+        .report-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+        }
+        .report-header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #FFD700;
+        }
+        .report-header h1 {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #000;
+        }
+        .report-header p {
+            font-size: 14px;
+            color: #333;
+            margin: 5px 0;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        .stat-box {
+            padding: 30px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            text-align: center;
+            background: white;
+        }
+        .stat-box.yellow {
+            background: #FFFACD;
+            border-color: #FFD700;
+        }
+        .stat-box.red {
+            background: #fee2e2;
+            border-color: #dc2626;
+        }
+        .stat-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #555;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+        }
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #000;
+        }
+        .stat-box.red .stat-value {
+            color: #dc2626;
+        }
+        .report-table-title {
+            font-size: 20px;
+            margin: 30px 0 20px 0;
+            color: #000;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 10px;
+            font-weight: bold;
+        }
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+        .report-table thead {
+            background: #f3f4f6;
+        }
+        .report-table th {
+            padding: 14px;
+            text-align: left;
+            font-weight: 700;
+            color: #000;
+            border-bottom: 2px solid #ddd;
+        }
+        .report-table td {
+            padding: 12px 14px;
+            color: #000;
+            border-bottom: 1px solid #eee;
+        }
+        .report-table tbody tr:nth-child(even) {
+            background: #fafafa;
+        }
+        .text-right {
+            text-align: right;
+        }
+        .revenue {
+            color: #dc2626;
+            font-weight: 600;
+        }
+        .report-footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 30px;
+            justify-content: center;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-print {
+            background: #FFD700;
+            color: #000;
+        }
+        .btn-back {
+            background: #e5e7eb;
+            color: #000;
+        }
+        .btn:hover {
+            opacity: 0.9;
+        }
+        @media print {
+            body { margin: 0; padding: 10mm; background: white; }
+            .report-container { margin: 0; padding: 0; }
+            .action-buttons { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+<div class="report-container">
+    <div class="report-header">
+        <h1>SALES REPORT</h1>
+        <p><strong>{{ period|upper }} SUMMARY</strong></p>
+        <p>{{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}</p>
+    </div>
+
+    <div class="stats">
+        <div class="stat-box yellow">
+            <div class="stat-label">Total Units Sold</div>
+            <div class="stat-value">{{ total_units }}</div>
+        </div>
+        <div class="stat-box red">
+            <div class="stat-label">Total Revenue</div>
+            <div class="stat-value">₱{{ total_revenue|floatformat:2 }}</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">Total Orders</div>
+            <div class="stat-value">{{ sales_count }}</div>
+        </div>
+    </div>
+
+    <h2 class="report-table-title">Sales by Product</h2>
+    
+    <table class="report-table">
+        <thead>
+            <tr>
+                <th>Product Name</th>
+                <th class="text-right">Units</th>
+                <th class="text-right">Revenue</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if sales_by_product %}
+                {% for item in sales_by_product %}
+                <tr>
+                    <td>{{ item.product__name }}</td>
+                    <td class="text-right">{{ item.units }}</td>
+                    <td class="text-right revenue">₱{{ item.revenue|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="3" style="text-align: center; padding: 30px; color: #999;">No sales data for this period</td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+
+    <div class="report-footer">
+        <p>Generated on {{ now|date:"M d, Y \\a\\t H:i" }}</p>
+        <p>Koki's Foodhub - Sales & Inventory Management System</p>
+    </div>
+
+    <div class="action-buttons">
+        <button class="btn btn-print" onclick="window.print()">🖨️ Print Report</button>
+        <a href="{% url 'dashboard' %}" class="btn btn-back">← Back to Dashboard</a>
+    </div>
+</div>
+</body>
+</html>

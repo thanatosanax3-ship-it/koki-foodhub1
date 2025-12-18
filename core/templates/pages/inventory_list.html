@@ -1,0 +1,61 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Inventory - Koki's Foodhub{% endblock %}
+
+{% block content %}
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px;">
+    <div>
+      <h1 class="section-title">Inventory</h1>
+      <p style="color: var(--text-secondary); margin: 0;">Track and manage your stock levels.</p>
+    </div>
+    {% include "atoms/button.html" with href="/inventory/create/" text="📦 Add Inventory" variant="primary" %}
+  </div>
+
+  {% if items %}
+    <div class="card" style="overflow-x: auto;">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Product</th>
+            <th>Quantity</th>
+            <th>Reorder Point</th>
+            <th>Last Updated</th>
+            <th style="text-align: right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for i in items %}
+            <tr>
+              <td><code style="background: var(--muted); padding: 4px 8px; border-radius: 4px; font-size: 12px;">{{ i.sku }}</code></td>
+              <td><strong>{{ i.product.name }}</strong></td>
+              <td>
+                {% if i.quantity < i.reorder_point %}
+                  <span class="badge low">{{ i.quantity }}</span>
+                {% else %}
+                  <span class="badge success">{{ i.quantity }}</span>
+                {% endif %}
+              </td>
+              <td>{{ i.reorder_point }}</td>
+              <td style="color: var(--text-secondary); font-size: 14px;">{{ i.updated_at|date:"M d, Y" }}</td>
+              <td style="text-align: right;">
+                <div class="table-actions" style="justify-content: flex-end;">
+                  <a class="btn" href="{% url 'inventory_update' i.id %}">✏️ Edit</a>
+                  <form method="post" action="{% url 'inventory_delete' i.id %}" style="display:inline;" onsubmit="return confirm('Delete this inventory item?');">
+                    {% csrf_token %}
+                    <button class="btn danger" type="submit">🗑️ Delete</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="card" style="text-align: center; padding: 48px 24px;">
+      <p style="color: var(--text-secondary); font-size: 16px; margin-bottom: 20px;">No inventory items yet. Add your first item to get started.</p>
+      {% include "atoms/button.html" with href="/inventory/create/" text="📦 Add Inventory" variant="primary" %}
+    </div>
+  {% endif %}
+{% endblock %}

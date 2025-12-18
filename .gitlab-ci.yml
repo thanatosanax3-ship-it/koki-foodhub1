@@ -1,0 +1,40 @@
+# Selective CI: only run pipelines for changes to core/backend or deploy-related files.
+# This helps avoid exhausting shared pipeline minutes for purely frontend/static updates.
+
+workflow:
+  rules:
+    # Run when core backend files or deployment scripts change
+    - changes:
+        - "core/**"
+        - "koki_foodhub/**"
+        - "manage.py"
+        - "requirements.txt"
+        - "setup_postgres.py"
+        - "deploy_*.py"
+        - "tools/**"
+      when: always
+    # Otherwise don't create a pipeline
+    - when: never
+
+stages:
+  - test
+
+# A lightweight test job; adjust as necessary for your project's test runner.
+test:
+  stage: test
+  script:
+    - echo "Running minimal CI tasks for allowed changes"
+    - python -V || true
+    - pip -V || true
+    - echo "(Add your full test steps under CI when you have pipeline minutes)"
+  rules:
+    - changes:
+        - "core/**"
+        - "koki_foodhub/**"
+        - "manage.py"
+        - "requirements.txt"
+        - "setup_postgres.py"
+        - "deploy_*.py"
+        - "tools/**"
+      when: on_success
+    - when: never

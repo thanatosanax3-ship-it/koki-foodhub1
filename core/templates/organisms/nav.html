@@ -1,0 +1,12 @@
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="brand">Koki's Foodhub</div>
+    <div class="menu">
+      <a href="{% url 'dashboard' %}" class="{% if request.path == '/' %}active{% endif %}">Dashboard</a>
+      <a href="{% url 'product_list' %}" class="{% if '/products' in request.path %}active{% endif %}">Products</a>
+      <a href="{% url 'inventory_list' %}" class="{% if '/inventory' in request.path %}active{% endif %}">Inventory</a>
+      <a href="{% url 'sale_list' %}" class="{% if '/sales' in request.path %}active{% endif %}">Sales</a>
+      <a href="{% url 'forecast' %}" class="{% if '/forecast' in request.path %}active{% endif %}">Forecast</a>
+    </div>
+  </div>
+</nav>
